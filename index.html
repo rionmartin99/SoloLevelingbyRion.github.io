@@ -1014,6 +1014,9 @@
                         const completedQuests = hunter.CompletedQuests || [];
                         const allQuests = App.state.systemData.quests || [];
                         const questListHtml = allQuests.map(q => {
+                            // Guild Visibility Logic: Only show quests for 'ALL' or matching hunter's guild
+                            if (q.AssignedGuild && q.AssignedGuild !== 'ALL' && q.AssignedGuild !== hunter.Guild) return '';
+
                             const completedEntry = completedQuests.find(cq => cq.quest_id === q.ID);
                             const isCompleted = !!completedEntry;
                             const statusClass = isCompleted ? 'text-emerald-400 border-emerald-900 bg-emerald-900/20' : 'text-red-400 border-red-900 bg-red-900/20';
@@ -1041,6 +1044,19 @@
                                 ? `<span class="text-[9px] bg-blue-900/50 text-blue-300 px-1 rounded border border-blue-800 mr-2">${q.AssignedGuild}</span>`
                                 : '';
 
+                            // Criteria List
+                            let rubricHtml = '';
+                            if (q.Rubrics && q.Rubrics.length > 0) {
+                                rubricHtml = '<div class="mt-2 pl-2 border-l border-gray-700 space-y-1">';
+                                q.Rubrics.forEach(r => {
+                                    // Robust Property Access: Handle different capitalizations or potential data creep
+                                    const desc = r.criterion || r.Criterion || r.description || r.Description || "Detail Undefined";
+                                    const pts = r.points || r.Points || 0;
+                                    rubricHtml += `<div class="flex justify-between text-[10px] text-gray-500 font-mono"><span>- ${desc}</span> <span class="text-blue-500/50">[${pts}]</span></div>`;
+                                });
+                                rubricHtml += '</div>';
+                            }
+
                             return `
                     <div class="flex justify-between items-start p-3 rounded border ${statusClass} mb-2">
                         <div class="flex-grow">
@@ -1050,6 +1066,7 @@
                             </div>
                             <div class="text-[10px] md:text-xs text-gray-500">${q.TotalXP} XP Reward</div>
                             ${deadlineText}
+                            ${rubricHtml}
                         </div>
                         <div class="text-[10px] md:text-xs font-black tracking-widest ${isCompleted ? 'text-emerald-500' : 'text-red-500'} self-center ml-2">
                             ${isCompleted ? 'COMPLETE' : 'PENDING'}
