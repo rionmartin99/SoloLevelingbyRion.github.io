@@ -10,6 +10,8 @@
     <!-- EXTERNAL LIBRARIES -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- Chart.js for Analytics Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@400;600;800&display=swap"
         rel="stylesheet">
@@ -338,17 +340,21 @@
         </div>
         <div class="text-blue-500 animate-pulse text-lg md:text-xl font-mono">SYSTEM ONLINE // AWAITING COMMAND</div>
         <div class="flex flex-col sm:flex-row justify-center gap-4 w-full sm:w-auto">
-            <button id="btn-system-interface"
+            <button id="btn-license-scan"
                 class="bg-blue-700/80 hover:bg-blue-600/80 text-white px-6 py-3 md:px-8 rounded-sm font-bold backdrop-blur-md border border-blue-500 uppercase tracking-widest hover:shadow-[0_0_20px_rgba(37,99,235,0.6)] transition-all w-full sm:w-auto cursor-pointer relative z-50">
-                System Interface
+                Hunter License Scan
+            </button>
+            <button id="btn-hunter-interface"
+                class="bg-emerald-700/80 hover:bg-emerald-600/80 text-white px-6 py-3 md:px-8 rounded-sm font-bold backdrop-blur-md border border-emerald-500 uppercase tracking-widest hover:shadow-[0_0_20px_rgba(16,185,129,0.6)] transition-all w-full sm:w-auto cursor-pointer relative z-50">
+                Hunter Interface
             </button>
             <button id="btn-vs-mode"
                 class="bg-red-700/80 hover:bg-red-600/80 text-white px-6 py-3 md:px-8 rounded-sm font-bold backdrop-blur-md border border-red-500 uppercase tracking-widest hover:shadow-[0_0_20px_rgba(239,68,68,0.6)] transition-all w-full sm:w-auto cursor-pointer relative z-50">
                 VS Mode
             </button>
         </div>
-        <p class="text-gray-500 text-[10px] md:text-xs font-mono max-w-xs mx-auto md:max-w-none">PRESS [SYSTEM
-            INTERFACE] FOR HUNTER LICENSE SCANNING</p>
+        <p class="text-gray-500 text-[10px] md:text-xs font-mono max-w-xs mx-auto md:max-w-none">
+            PRESS [HUNTER INTERFACE] TO LOG-IN TO YOUR ACCOUNT</p>
 
         <!-- New Notification Area -->
         <div class="w-full max-w-2xl mt-auto pt-8 flex flex-col gap-2">
@@ -552,7 +558,10 @@
                     };
 
                     // 3. Start Data Sync
-                    this.API.refreshData();
+                    // 3. Start Data Sync
+                    this.API.refreshData().then(() => {
+                        App.Profile.checkPersistence();
+                    });
                     setInterval(() => this.API.refreshData(), 15000);
 
                     // 4. Keyboard Shortcuts
@@ -561,8 +570,16 @@
 
                 // --- EVENT BINDING ---
                 bindEvents() {
-                    this.els.btnInterface.addEventListener('click', () => this.Scanner.start('profile'));
-                    this.els.btnVsMode.addEventListener('click', () => this.VS.enterMode());
+                    document.getElementById('btn-license-scan').onclick = () => App.Scanner.start('profile');
+                    document.getElementById('btn-hunter-interface').onclick = () => {
+                        const savedId = localStorage.getItem('hunter_id');
+                        if (savedId) {
+                            App.Profile.login(savedId);
+                        } else {
+                            App.Scanner.start('login');
+                        }
+                    };
+                    document.getElementById('btn-vs-mode').onclick = () => App.VS.enterMode();
                     this.els.btnTerminateScan.addEventListener('click', () => this.Scanner.stop());
                 },
 
@@ -921,13 +938,16 @@
                         // 3. UI Logic
                         const ctx = App.state.scanContext;
                         if (ctx === 'profile') App.Profile.show(decodedText);
+                        else if (ctx === 'login') App.Profile.login(decodedText);
                         else if (ctx === 'vs_red' || ctx === 'vs_blue') App.VS.processScan(decodedText, ctx);
                     }
                 },
 
                 // --- PROFILE LOGIC ---
                 Profile: {
+                    // Temporary View (License Scan)
                     show(hunterId) {
+                        App.state.isLoggedIn = false;
                         App.state.currentHunterId = hunterId;
                         const hunter = App.Helpers.findHunter(hunterId);
 
@@ -944,10 +964,53 @@
                         App.state.profileTimeout = setTimeout(() => this.close(), 20000);
                     },
 
-                    close() {
-                        App.UI.showView('standby');
-                        App.els.status.innerHTML = '';
+                    // Persistent View (Hunter Interface)
+                    login(hunterId) {
+                        localStorage.setItem('hunter_id', hunterId);
+                        App.state.isLoggedIn = true;
+                        App.state.currentHunterId = hunterId;
+                        const hunter = App.Helpers.findHunter(hunterId);
+
+                        if (!hunter) {
+                            App.UI.showToast("ID NOT RECOGNIZED IN SYSTEM", true);
+                            localStorage.removeItem('hunter_id');
+                            return;
+                        }
+
+                        App.UI.showToast("LOGIN SUCCESSFUL: " + hunter.Name);
+                        this.render(hunter);
+                        App.UI.showView('status');
+
+                        // NO TIMEOUT FOR LOGIN
                         if (App.state.profileTimeout) clearTimeout(App.state.profileTimeout);
+                    },
+
+                    checkPersistence() {
+                        const savedId = localStorage.getItem('hunter_id');
+                        if (savedId) {
+                            console.log("Restoring session for:", savedId);
+                            this.login(savedId);
+                        }
+                    },
+
+                    close() {
+                        // Just hide the view (minimize). If logged in, keep session active.
+                        App.UI.showView('standby');
+
+                        // Only clear DOM if we are fully closing a temporary scan
+                        if (!App.state.isLoggedIn) {
+                            App.els.status.innerHTML = '';
+                        }
+
+                        if (App.state.profileTimeout) clearTimeout(App.state.profileTimeout);
+                    },
+
+                    logout() {
+                        localStorage.removeItem('hunter_id');
+                        App.state.isLoggedIn = false;
+                        App.UI.showToast("LOGGED OUT");
+                        App.els.status.innerHTML = ''; // Clear sensitive data
+                        this.close();
                     },
 
                     async initPhotoUpload(hunterId) {
@@ -1002,14 +1065,22 @@
 
 
                     async render(hunter) {
-                        let imgSrc = "https://placehold.co/400x400/1e293b/ffffff?text=NO+IMAGE";
-                        if (hunter.PhotoURL) {
-                            try {
-                                const blob = await App.Helpers.fetchImageWithRetries(App.Helpers.getDirectGdriveUrl(hunter.PhotoURL));
-                                imgSrc = URL.createObjectURL(blob);
-                            } catch (e) { }
-                        }
+                        // NON-BLOCKING RENDER: Show UI immediately with placeholder, then fetch image
+                        const defaultImg = "https://placehold.co/400x400/1e293b/ffffff?text=NO+IMAGE";
 
+                        // Async Image Fetch (runs in background)
+                        if (hunter.PhotoURL) {
+                            App.Helpers.fetchImageWithRetries(App.Helpers.getDirectGdriveUrl(hunter.PhotoURL))
+                                .then(blob => {
+                                    const url = URL.createObjectURL(blob);
+                                    const img = document.getElementById(`profile-img-${hunter.ID}`);
+                                    if (img) {
+                                        img.src = url;
+                                        img.classList.remove('opacity-50');
+                                    }
+                                })
+                                .catch(() => console.log("Image load failed"));
+                        }
 
                         const completedQuests = hunter.CompletedQuests || [];
                         const allQuests = App.state.systemData.quests || [];
@@ -1081,16 +1152,104 @@
 
                         const currentLevel = hunter.Level;
 
+                        // DUNGEON TOWER LOGIC (Dynamic)
+                        let dungeonHtml = '';
+                        if (hunter.Guild && hunter.Guild !== 'None') {
+                            const guildHunters = App.state.systemData.hunters[hunter.Guild] || [];
+                            const wisdomQuests = (App.state.systemData.quests || []).filter(q => q.Category === 'WISDOM');
+                            const totalWisdomXP = wisdomQuests.reduce((sum, q) => sum + (Number(q.TotalXP) || 0), 0);
+
+                            // Boss HP = (Total Wisdom XP) * (Num Hunters) * 0.90
+                            if (totalWisdomXP > 0 && guildHunters.length > 0) {
+                                const bossHP = Math.floor(totalWisdomXP * guildHunters.length * 0.90);
+                                let damage = 0;
+
+                                guildHunters.forEach(h => {
+                                    const completed = h.CompletedQuests || [];
+                                    completed.forEach(cq => {
+                                        const q = wisdomQuests.find(wq => wq.ID === cq.quest_id);
+                                        if (q) damage += Number(cq.xp_awarded || cq.total_xp || 0);
+                                    });
+                                });
+
+                                const percentage = Math.min(100, (damage / bossHP) * 100);
+                                const isCleared = percentage >= 100;
+                                const settings = App.state.systemData.settings || {};
+                                const bossImg = settings['boss_photo'] ? App.Helpers.getDirectGdriveUrl(settings['boss_photo']) : 'https://placehold.co/600x400/581c87/ffffff?text=DUNGEON+BOSS';
+
+                                dungeonHtml = `
+                                <div class="mb-6 bg-gray-900 border ${isCleared ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'border-purple-900/50'} rounded-lg overflow-hidden relative group shrink-0">
+                                    <div class="h-28 bg-gray-800 relative">
+                                        <img src="${bossImg}" class="w-full h-full object-cover opacity-60">
+                                        <div class="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent"></div>
+                                        <div class="absolute bottom-2 left-3">
+                                             <div class="text-[9px] text-purple-300 font-bold tracking-wider uppercase mb-0 shadow-black drop-shadow-md">GUILD RAID</div>
+                                             <div class="text-lg font-black text-white cinzel shadow-black drop-shadow-md">${hunter.Guild} TOWER</div>
+                                        </div>
+                                        <div class="absolute top-2 right-2 bg-black/50 backdrop-blur px-2 py-1 rounded border border-white/10">
+                                            <div class="text-[10px] text-white font-bold">${guildHunters.length} Hunters</div>
+                                        </div>
+                                    </div>
+                                    <div class="p-3">
+                                        <div class="flex justify-between text-[10px] mb-1">
+                                             <span class="text-gray-400">BOSS HP</span>
+                                             <span class="text-white font-mono">${damage.toLocaleString()} / ${bossHP.toLocaleString()}</span>
+                                        </div>
+                                        <div class="h-3 bg-gray-950 rounded-full overflow-hidden border border-gray-700 relative">
+                                             <div class="h-full ${isCleared ? 'bg-yellow-500' : 'bg-purple-600'} transition-all duration-1000 relative" style="width: ${percentage}%">
+                                                  <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+                                             </div>
+                                        </div>
+                                        <div class="flex justify-between items-center mt-2">
+                                             <div class="text-[10px] text-gray-500 italic">Complete WISDOM quests to deal damage.</div>
+                                             <div class="text-base font-bold ${isCleared ? 'text-yellow-400' : 'text-purple-400'}">${percentage.toFixed(1)}%</div>
+                                        </div>
+                                    </div>
+                                </div>`;
+                            } else {
+                                // INACTIVE STATE
+                                const settings = App.state.systemData.settings || {};
+                                const bossImg = settings['boss_photo'] ? App.Helpers.getDirectGdriveUrl(settings['boss_photo']) : 'https://placehold.co/600x400/581c87/ffffff?text=DUNGEON+BOSS';
+
+                                dungeonHtml = `
+                                <div class="mb-6 bg-gray-900 border border-gray-800 rounded-lg overflow-hidden relative group shrink-0 opacity-60 grayscale">
+                                    <div class="h-28 bg-gray-800 relative">
+                                        <img src="${bossImg}" class="w-full h-full object-cover opacity-40">
+                                        <div class="absolute inset-0 flex items-center justify-center">
+                                             <div class="text-xs text-gray-400 font-bold uppercase tracking-widest border border-gray-600 px-3 py-1 rounded bg-black/50">TOWER LOCKED</div>
+                                        </div>
+                                        <div class="absolute bottom-2 left-3">
+                                             <div class="text-[9px] text-gray-500 font-bold tracking-wider uppercase mb-0">GUILD RAID</div>
+                                             <div class="text-lg font-black text-gray-400 cinzel">${hunter.Guild} TOWER</div>
+                                        </div>
+                                    </div>
+                                    <div class="p-3 text-center">
+                                        <div class="text-[10px] text-gray-500 italic">Awaiting WISDOM Quests...</div>
+                                    </div>
+                                </div>`;
+                            }
+                        }
+
                         const html = `
-                <div class="bg-gray-900/95 md:bg-gray-900/90 border border-gray-700 p-4 md:p-8 rounded-none md:rounded-2xl shadow-2xl backdrop-blur-md relative overflow-hidden animate-fade-in-up min-h-full md:min-h-0">
-                    <button onclick="App.Profile.close()" class="absolute top-4 right-4 text-gray-500 hover:text-white hover:bg-red-600/50 rounded-full w-8 h-8 flex items-center justify-center transition-all z-50 border border-transparent hover:border-red-500">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
+                <div class="bg-gray-900/95 md:bg-gray-900/90 border border-gray-700 p-4 md:p-8 rounded-none md:rounded-2xl shadow-2xl backdrop-blur-md relative overflow-hidden animate-fade-in-up min-h-full md:min-h-0" id="profile-container">
+                    ${!App.state.isLoggedIn ?
+                                `<button onclick="App.Profile.close()" class="absolute top-4 right-4 text-gray-500 hover:text-white hover:bg-red-600/50 rounded-full w-8 h-8 flex items-center justify-center transition-all z-50 border border-transparent hover:border-red-500">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>` : ''
+                            }
                     <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600 animate-pulse"></div>
                     
-                    <div class="flex justify-between items-start mb-4 md:mb-6 border-b border-gray-700 pb-4">
-                        <div class="text-[10px] md:text-xs text-gray-500 font-mono">ID: ${hunter.ID} // <span class="text-blue-400 animate-pulse">ONLINE</span></div>
-                        <div class="flex gap-4 pr-8">
+                    <div class="flex justify-between items-center mb-4 md:mb-6 border-b border-gray-700 pb-4 gap-4">
+                        <div class="flex flex-col items-start gap-2">
+                             ${App.state.isLoggedIn ?
+                                `<button onclick="App.Profile.close()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-3 py-1.5 rounded-full text-[10px] md:text-xs font-bold border border-gray-600 flex items-center gap-2 transition-colors group">
+                                    <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                                    BACK TO MENU
+                                </button>` : ''
+                            }
+                            <div class="text-[10px] md:text-xs text-gray-500 font-mono">ID: ${hunter.ID} // <span class="text-blue-400 animate-pulse">ONLINE</span></div>
+                        </div>
+                        <div class="flex gap-2 md:gap-4 pr-0 md:pr-8">
                             <button onclick="App.Profile.switchTab('stats')" id="btn-stats" class="text-sm font-bold text-white uppercase border-b-2 border-blue-500 px-2 py-1 transition-colors">STATUS</button>
                             <button onclick="App.Profile.switchTab('quests')" id="btn-quests" class="text-sm font-bold text-gray-500 uppercase border-b-2 border-transparent hover:text-white px-2 py-1 transition-colors">MISSIONS</button>
                         </div>
@@ -1099,7 +1258,7 @@
                     <div class="flex flex-col md:flex-row gap-4 md:gap-8" id="view-stats">
                         <div class="w-full md:w-1/3 flex flex-row md:flex-col gap-4 md:gap-0 items-center md:items-stretch">
                             <div class="w-1/3 md:w-full aspect-square bg-gray-800 rounded-xl overflow-hidden border-2 border-gray-600 shadow-[0_0_15px_rgba(0,0,0,0.5)] mb-0 md:mb-4 relative shrink-0">
-                                <img src="${imgSrc}" class="w-full h-full object-cover">
+                                <img id="profile-img-${hunter.ID}" src="${defaultImg}" class="w-full h-full object-cover opacity-50 transition-opacity duration-500">
 <button onclick="App.Profile.initPhotoUpload('${hunter.ID}')" class="absolute bottom-2 right-2 bg-black/60 hover:bg-blue-600 text-white p-2 rounded-full backdrop-blur-md border border-white/20 shadow-lg z-20 transition-all cursor-pointer group">
                                 <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
@@ -1145,16 +1304,126 @@
                                 </div>
                                 <div class="text-right text-[10px] md:text-xs text-gray-500 pt-2">Total Combat Winnings: <span class="text-yellow-400 font-mono">${totalAPWon} XP</span></div>
                             </div>
+
+                            <!-- Academic Performance Panel (NEW) -->
+                            <div class="mt-6 pt-4 border-t border-gray-800">
+                                <div class="text-[10px] text-gray-500 uppercase font-bold mb-3 tracking-widest">📊 Academic Performance</div>
+                                
+                                <!-- 1. Rating (Feature Banner) -->
+                                <div class="flex flex-col items-center justify-center mb-3 p-4 bg-gray-900/80 rounded border border-gray-800 text-center relative overflow-hidden group">
+                                    <div class="absolute inset-0 bg-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    <div class="text-[10px] text-gray-500 uppercase font-bold mb-1 tracking-widest z-10">Overall Rating</div>
+                                    <div id="ht-sealed-rating" class="text-3xl font-black z-10 ${(() => {
+                                const rating = App.Helpers.calculateRating(hunter);
+                                if (rating >= 90) return 'text-yellow-400';
+                                if (rating >= 75) return 'text-blue-400';
+                                return 'text-red-500 animate-pulse';
+                            })()}">${App.Helpers.calculateRating(hunter).toFixed(1)}%</div>
+                                </div>
+
+                                <!-- 2. Charts (Stacked for Mobile Visibility) -->
+                                <div class="space-y-3 mb-3">
+                                    <div class="bg-gray-900 rounded p-3 border border-gray-800">
+                                        <div class="text-[9px] text-gray-500 uppercase font-bold mb-2">📈 Trajectory</div>
+                                        <div class="h-32">
+                                            <canvas id="ht-trajectory-chart"></canvas>
+                                        </div>
+                                    </div>
+                                    <div class="bg-gray-900 rounded p-3 border border-gray-800">
+                                        <div class="text-[9px] text-gray-500 uppercase font-bold mb-2">🎯 Hunter Build</div>
+                                        <div class="h-40">
+                                            <canvas id="ht-radar-chart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 3. Stats Breakdown (3-Column Grid) -->
+                                <div class="grid grid-cols-3 gap-2 mb-3">
+                                    ${(() => {
+                                const stats = App.Helpers.getCategoryStats(hunter);
+                                return `
+                                            <div class="bg-gray-900 rounded p-2 text-center border border-gray-800">
+                                                <div class="text-[9px] text-gray-500 uppercase mb-1">📚 Know</div>
+                                                <div class="text-sm font-bold text-blue-400">${stats.knowledge.toFixed(0)}%</div>
+                                                <div class="text-[8px] text-gray-600">20%</div>
+                                            </div>
+                                            <div class="bg-gray-900 rounded p-2 text-center border border-gray-800">
+                                                <div class="text-[9px] text-gray-500 uppercase mb-1">⚔️ Skill</div>
+                                                <div class="text-sm font-bold text-red-400">${stats.skills.toFixed(0)}%</div>
+                                                <div class="text-[8px] text-gray-600">60%</div>
+                                            </div>
+                                            <div class="bg-gray-900 rounded p-2 text-center border border-gray-800">
+                                                <div class="text-[9px] text-gray-500 uppercase mb-1">🏆 Wis</div>
+                                                <div class="text-sm font-bold text-yellow-400">${stats.wisdom.toFixed(0)}%</div>
+                                                <div class="text-[8px] text-gray-600">20%</div>
+                                            </div>
+                                        `;
+                            })()}
+                                </div>
+
+                                <!-- 4. Wisdom Simulator -->
+                                <div class="bg-gray-900/80 rounded p-3 border border-gray-800">
+                                    <div class="text-[9px] text-gray-500 uppercase font-bold mb-2">🔮 Exam Simulator</div>
+                                    <div class="flex items-center gap-2">
+                                        <input type="range" id="ht-wisdom-sim" min="0" max="100" value="${App.Helpers.getCategoryStats(hunter).wisdom}" 
+                                            class="flex-1 accent-yellow-500" 
+                                            oninput="App.Helpers.updateSimulation(this.value, '${hunter.ID}')">
+                                        <span id="ht-wisdom-val" class="text-xs text-yellow-400 font-mono w-10 text-right">${App.Helpers.getCategoryStats(hunter).wisdom.toFixed(0)}%</span>
+                                        <span id="ht-sim-rating" class="text-[10px] text-yellow-400/50 font-bold ml-1 min-w-[3rem]">--%</span>
+                                    </div>
+                                    <div class="text-[9px] text-gray-600 mt-1 italic text-center">"If I score X% on the exam..."</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="hidden h-[400px] flex flex-col" id="view-quests">
+                    <div class="hidden flex-1 flex flex-col min-h-0" id="view-quests">
                         <h2 class="text-xl md:text-2xl font-black text-white cinzel mb-4">ACTIVE MISSIONS</h2>
+                        ${dungeonHtml}
                         <div class="overflow-y-auto pr-2 quest-scroll flex-grow">${questListHtml}</div>
                     </div>
+                    
+                    ${App.state.isLoggedIn ? `
+                        <div id="logout-trigger" class="mt-8 mb-4 flex justify-center opacity-0 transition-opacity duration-500">
+                            <button onclick="App.Profile.logout()" class="bg-red-900/20 hover:bg-red-900/50 border border-red-900/50 text-red-500 px-6 py-2 rounded uppercase text-xs font-bold tracking-widest transition-all">
+                                Log Out
+                            </button>
+                        </div>
+                    ` : ''}
                 </div>`;
 
                         App.els.status.innerHTML = html;
+
+                        // Scroll Logic for Logout Trigger
+                        if (App.state.isLoggedIn) {
+                            const container = document.getElementById('profile-container');
+                            const logoutBtn = document.getElementById('logout-trigger');
+                            if (container && logoutBtn) {
+                                // For full-page mobile view (where container is h-full), we need to check if the scroll is on body or container?
+                                // Actually, in mobile view (p-4 min-h-full), typical scrolling is on the body if specific element isn't overflow-y-auto.
+                                // Let's check CSS: 'safe-bottom' on standby. Line 1087: min-h-full md:min-h-0.
+                                // It seems the main content scrolls on BODY or App.els.status?
+                                // App.els.status is defined where? line 1230 inserts into it.
+
+                                // Since we are in a single-page app, scrolling usually happens on a container.
+                                // If not, we can attach to window.
+                                // Let's attach to the container first.
+
+                                // Actually, let's use IntersectionObserver which is cleaner for "reached bottom".
+                                const observer = new IntersectionObserver((entries) => {
+                                    entries.forEach(entry => {
+                                        if (entry.isIntersecting) {
+                                            logoutBtn.classList.remove('opacity-0');
+                                        }
+                                    });
+                                }, { threshold: 0.5 });
+                                observer.observe(logoutBtn);
+                            }
+                        }
+
+                        // Render charts after DOM is updated
+                        setTimeout(() => App.Helpers.renderCharts(hunter), 100);
                     },
 
                     switchTab(tabName) {
@@ -1547,6 +1816,150 @@
                             });
                         }
                         if (!data.logs) data.logs = [];
+                    },
+
+                    // --- ANALYTICS FUNCTIONS (Hunter Education Initiative) ---
+                    K_WEIGHT: 0.20,
+                    S_WEIGHT: 0.60,
+                    W_WEIGHT: 0.20,
+
+                    getCategoryStats(hunter) {
+                        const completedQuests = hunter.CompletedQuests || [];
+                        const allQuests = App.state.systemData?.quests || [];
+
+                        let kTotal = 0, kMax = 0, sTotal = 0, sMax = 0, wTotal = 0, wMax = 0;
+
+                        completedQuests.forEach(cq => {
+                            const quest = allQuests.find(q => q.ID === cq.quest_id);
+                            if (!quest) return;
+
+                            const category = quest.Category || 'SKILLS';
+                            const earnedScore = Number(cq.xp_awarded || cq.total_xp || 0);
+                            const maxScore = Number(quest.TotalXP || 0);
+
+                            if (category === 'KNOWLEDGE') { kTotal += earnedScore; kMax += maxScore; }
+                            else if (category === 'WISDOM') { wTotal += earnedScore; wMax += maxScore; }
+                            else if (category !== 'SIDE') { sTotal += earnedScore; sMax += maxScore; }
+                        });
+
+                        return {
+                            knowledge: kMax > 0 ? (kTotal / kMax) * 100 : 0,
+                            skills: sMax > 0 ? (sTotal / sMax) * 100 : 0,
+                            wisdom: wMax > 0 ? (wTotal / wMax) * 100 : 0
+                        };
+                    },
+
+                    calculateRating(hunter, wisdomOverride = null) {
+                        const stats = this.getCategoryStats(hunter);
+                        const wScore = wisdomOverride !== null ? wisdomOverride : stats.wisdom;
+                        return (stats.knowledge * this.K_WEIGHT) + (stats.skills * this.S_WEIGHT) + (wScore * this.W_WEIGHT);
+                    },
+
+                    updateSimulation(value, hunterId) {
+                        const wisdomVal = document.getElementById('ht-wisdom-val');
+                        const simRating = document.getElementById('ht-sim-rating');
+                        if (wisdomVal) wisdomVal.textContent = `${value}%`;
+
+                        const hunter = this.findHunter(hunterId);
+                        if (!hunter || !simRating) return;
+
+                        const projected = this.calculateRating(hunter, Number(value));
+                        simRating.textContent = `Sim: ${projected.toFixed(1)}%`;
+
+                        simRating.className = "text-[10px] font-bold ml-1 transition-colors duration-300 " +
+                            (projected >= 90 ? 'text-yellow-400' : projected >= 75 ? 'text-blue-400' : 'text-red-500');
+                    },
+
+                    renderCharts(hunter) {
+                        const stats = this.getCategoryStats(hunter);
+
+                        // --- 1. History Trajectory Chart (Chronological) ---
+                        const trajCtx = document.getElementById('ht-trajectory-chart');
+                        if (trajCtx && typeof Chart !== 'undefined') {
+                            const historyLabels = ['Start'];
+                            const historyK = [0];
+                            const historyS = [0];
+
+                            const sortedQuests = (hunter.CompletedQuests || []).slice().sort((a, b) => {
+                                const dateA = a.timestamp ? new Date(a.timestamp) : new Date(0);
+                                const dateB = b.timestamp ? new Date(b.timestamp) : new Date(0);
+                                return dateA - dateB;
+                            });
+
+                            let kRunTotal = 0, kRunMax = 0;
+                            let sRunTotal = 0, sRunMax = 0;
+                            const allQuests = App.state.systemData?.quests || [];
+
+                            sortedQuests.forEach((cq, index) => {
+                                const quest = allQuests.find(q => q.ID === cq.quest_id);
+                                if (!quest) return;
+
+                                const cat = quest.Category || 'SKILLS';
+                                const score = Number(cq.xp_awarded || cq.total_xp || 0);
+                                const max = Number(quest.TotalXP || 0);
+
+                                if (cat === 'KNOWLEDGE') { kRunTotal += score; kRunMax += max; }
+                                else if (cat !== 'SIDE' && cat !== 'WISDOM') { sRunTotal += score; sRunMax += max; } // Skills
+
+                                // Add point
+                                const label = cq.timestamp ? new Date(cq.timestamp).toLocaleDateString([], { month: 'numeric', day: 'numeric' }) : `Q${index + 1}`;
+                                historyLabels.push(label);
+                                historyK.push(kRunMax > 0 ? (kRunTotal / kRunMax) * 100 : 0);
+                                historyS.push(sRunMax > 0 ? (sRunTotal / sRunMax) * 100 : 0);
+                            });
+
+                            new Chart(trajCtx, {
+                                type: 'line',
+                                data: {
+                                    labels: historyLabels,
+                                    datasets: [
+                                        { label: 'Knowledge', data: historyK, borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.2)', fill: true, pointRadius: 2 },
+                                        { label: 'Skills', data: historyS, borderColor: '#f87171', backgroundColor: 'rgba(248,113,113,0.2)', fill: true, pointRadius: 2 }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { legend: { labels: { color: '#9ca3af', font: { size: 9 } } } },
+                                    scales: {
+                                        x: { ticks: { color: '#6b7280', maxRotation: 45, minRotation: 45, font: { size: 8 } }, grid: { color: '#374151' } },
+                                        y: { min: 0, max: 100, ticks: { color: '#6b7280', font: { size: 8 } }, grid: { color: '#374151' } }
+                                    }
+                                }
+                            });
+                        }
+
+                        // --- 2. Radar Chart ---
+                        const radarCtx = document.getElementById('ht-radar-chart');
+                        if (radarCtx && typeof Chart !== 'undefined') {
+                            new Chart(radarCtx, {
+                                type: 'radar',
+                                data: {
+                                    labels: ['📚', '⚔️', '🏆'],
+                                    datasets: [{
+                                        label: 'Build',
+                                        data: [stats.knowledge, stats.skills, stats.wisdom],
+                                        backgroundColor: 'rgba(59, 130, 246, 0.3)',
+                                        borderColor: '#3b82f6',
+                                        pointBackgroundColor: '#3b82f6'
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: { legend: { display: false } },
+                                    scales: {
+                                        r: {
+                                            min: 0, max: 100,
+                                            ticks: { color: '#6b7280', backdropColor: 'transparent', font: { size: 8 }, count: 5 },
+                                            grid: { color: '#374151' },
+                                            angleLines: { color: '#374151' },
+                                            pointLabels: { color: '#9ca3af', font: { size: 10 } }
+                                        }
+                                    }
+                                }
+                            });
+                        }
                     },
 
                     resizeImage(file, maxWidth = 600) {
