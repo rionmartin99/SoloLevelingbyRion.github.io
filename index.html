@@ -1158,11 +1158,15 @@
                         let dungeonHtml = '';
                         if (hunter.Guild && hunter.Guild !== 'None') {
                             const guildHunters = App.state.systemData.hunters[hunter.Guild] || [];
-                            const wisdomQuests = (App.state.systemData.quests || []).filter(q => q.Category === 'WISDOM');
+
+                            // Only count Wisdom quests ASSIGNED to this hunter's guild
+                            const wisdomQuests = (App.state.systemData.quests || []).filter(q =>
+                                q.Category === 'WISDOM' && q.AssignedGuild === hunter.Guild
+                            );
                             const totalWisdomXP = wisdomQuests.reduce((sum, q) => sum + (Number(q.TotalXP) || 0), 0);
 
                             // Boss HP = (Total Wisdom XP) * (Num Hunters) * 0.90
-                            if (totalWisdomXP > 0 && guildHunters.length > 0) {
+                            if (wisdomQuests.length > 0 && guildHunters.length > 0) {
                                 const bossHP = Math.floor(totalWisdomXP * guildHunters.length * 0.90);
                                 let damage = 0;
 
@@ -1174,8 +1178,10 @@
                                     });
                                 });
 
-                                const percentage = Math.min(100, (damage / bossHP) * 100);
-                                const isCleared = percentage >= 100;
+                                // Remaining HP (bar goes DOWN as damage increases)
+                                const remainingHP = Math.max(0, bossHP - damage);
+                                const remainingPercent = (remainingHP / bossHP) * 100;
+                                const isCleared = remainingHP === 0;
                                 const settings = App.state.systemData.settings || {};
                                 const bossImg = settings['boss_photo'] ? App.Helpers.getDirectGdriveUrl(settings['boss_photo']) : 'https://placehold.co/600x400/581c87/ffffff?text=DUNGEON+BOSS';
 
@@ -1195,20 +1201,20 @@
                                     <div class="p-3">
                                         <div class="flex justify-between text-[10px] mb-1">
                                              <span class="text-gray-400">BOSS HP</span>
-                                             <span class="text-white font-mono">${damage.toLocaleString()} / ${bossHP.toLocaleString()}</span>
+                                             <span class="text-white font-mono">${remainingHP.toLocaleString()} / ${bossHP.toLocaleString()}</span>
                                         </div>
                                         <div class="h-3 bg-gray-950 rounded-full overflow-hidden border border-gray-700 relative">
-                                             <div class="h-full ${isCleared ? 'bg-yellow-500' : 'bg-purple-600'} transition-all duration-1000 relative" style="width: ${percentage}%">
+                                             <div class="h-full ${isCleared ? 'bg-yellow-500' : 'bg-red-600'} transition-all duration-1000 relative" style="width: ${remainingPercent}%">
                                                   <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
                                              </div>
                                         </div>
                                         <div class="flex justify-between items-center mt-2">
-                                             <div class="text-[10px] text-gray-500 italic">Complete WISDOM quests to deal damage.</div>
-                                             <div class="text-base font-bold ${isCleared ? 'text-yellow-400' : 'text-purple-400'}">${percentage.toFixed(1)}%</div>
+                                             <div class="text-[10px] text-gray-500 italic">DMG Dealt: <span class="text-purple-400 font-bold">${damage.toLocaleString()}</span></div>
+                                             ${isCleared ? '<div class="text-xs font-bold text-yellow-400">🏆 CLEARED</div>' : ''}
                                         </div>
                                     </div>
                                 </div>`;
-                            } else {
+                            } else if (wisdomQuests.length === 0) {
                                 // INACTIVE STATE
                                 const settings = App.state.systemData.settings || {};
                                 const bossImg = settings['boss_photo'] ? App.Helpers.getDirectGdriveUrl(settings['boss_photo']) : 'https://placehold.co/600x400/581c87/ffffff?text=DUNGEON+BOSS';
