@@ -2008,9 +2008,14 @@
 
                     getDirectGdriveUrl(url) {
                         if (!url || typeof url !== 'string') return null;
+                        // If already a thumbnail URL, return as-is (best for embedding)
+                        if (url.includes('drive.google.com/thumbnail')) {
+                            return url;
+                        }
                         const match = url.match(/id=([a-zA-Z0-9_-]+)|drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)|drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
                         const id = match ? (match[1] || match[2] || match[3]) : null;
-                        return id ? `https://drive.google.com/uc?export=view&id=${id}` : url;
+                        // Use thumbnail format for better embedding
+                        return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w1000` : url;
                     },
                     async fetchImageWithRetries(url, attempts = 3) {
                         if (!url) throw new Error("No URL provided");
