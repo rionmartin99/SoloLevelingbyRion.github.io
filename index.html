@@ -1169,13 +1169,27 @@
                             if (wisdomQuests.length > 0 && guildHunters.length > 0) {
                                 const bossHP = Math.floor(totalWisdomXP * guildHunters.length * 0.90);
                                 let damage = 0;
+                                const hunterDamages = []; // Track per-hunter damage
 
                                 guildHunters.forEach(h => {
+                                    let hunterDmg = 0;
                                     const completed = h.CompletedQuests || [];
                                     completed.forEach(cq => {
                                         const q = wisdomQuests.find(wq => wq.ID === cq.quest_id);
-                                        if (q) damage += Number(cq.xp_awarded || cq.total_xp || 0);
+                                        if (q) {
+                                            const xp = Number(cq.xp_awarded || cq.total_xp || 0);
+                                            hunterDmg += xp;
+                                            damage += xp;
+                                        }
                                     });
+
+                                    if (hunterDmg > 0) {
+                                        hunterDamages.push({
+                                            name: h.Name || 'Unknown',
+                                            damage: hunterDmg,
+                                            photoUrl: h.PhotoURL || null
+                                        });
+                                    }
                                 });
 
                                 // Remaining HP (bar goes DOWN as damage increases)
@@ -1184,6 +1198,39 @@
                                 const isCleared = remainingHP === 0;
                                 const settings = App.state.systemData.settings || {};
                                 const bossImg = settings['boss_photo'] ? App.Helpers.getDirectGdriveUrl(settings['boss_photo']) : 'https://placehold.co/600x400/581c87/ffffff?text=DUNGEON+BOSS';
+
+                                // Build roster HTML
+                                let rosterHtml = '';
+                                if (hunterDamages.length > 0) {
+                                    const sortedHunters = [...hunterDamages].sort((a, b) => b.damage - a.damage);
+                                    const rosterRows = sortedHunters.map((h, idx) => {
+                                        const photoUrl = h.photoUrl ? App.Helpers.getDirectGdriveUrl(h.photoUrl) : null;
+                                        const medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : ''));
+                                        const pct = damage > 0 ? ((h.damage / damage) * 100).toFixed(1) : 0;
+                                        return `
+                                            <div class="flex items-center gap-2 py-1 border-b border-gray-800 last:border-0">
+                                                <div class="text-[9px] text-gray-500 w-4 text-center">${medal || (idx + 1)}</div>
+                                                <div class="w-5 h-5 rounded-full bg-gray-700 overflow-hidden flex-shrink-0">
+                                                    ${photoUrl ? `<img src="${photoUrl}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-[7px] text-gray-400">?</div>`}
+                                                </div>
+                                                <div class="flex-1 min-w-0 text-[10px] text-white truncate">${h.name}</div>
+                                                <div class="text-right flex-shrink-0">
+                                                    <div class="text-[10px] font-bold text-purple-400">${h.damage.toLocaleString()}</div>
+                                                    <div class="text-[8px] text-gray-500">${pct}%</div>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('');
+
+                                    rosterHtml = `
+                                        <div class="mt-2 border-t border-gray-700 pt-2">
+                                            <div class="text-[9px] text-gray-400 uppercase tracking-wider font-bold mb-1">⚔️ Damage Leaderboard</div>
+                                            <div class="max-h-32 overflow-y-auto">
+                                                ${rosterRows}
+                                            </div>
+                                        </div>
+                                    `;
+                                }
 
                                 dungeonHtml = `
                                 <div class="mb-6 bg-gray-900 border ${isCleared ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'border-purple-900/50'} rounded-lg overflow-hidden relative group shrink-0">
@@ -1212,6 +1259,7 @@
                                              <div class="text-[10px] text-gray-500 italic">DMG Dealt: <span class="text-purple-400 font-bold">${damage.toLocaleString()}</span></div>
                                              ${isCleared ? '<div class="text-xs font-bold text-yellow-400">🏆 CLEARED</div>' : ''}
                                         </div>
+                                        ${rosterHtml}
                                     </div>
                                 </div>`;
                             } else if (wisdomQuests.length === 0) {
