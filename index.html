@@ -1209,7 +1209,10 @@
                                 const currentPhase = window.dungeonPhaseState[phaseKey];
                                 const phaseDamage = damage - currentPhase.baseDamage;
                                 const visualRemainingHP = Math.max(0, bossHP - phaseDamage);
-                                const visualPercent = (visualRemainingHP / bossHP) * 100;
+                                let visualPercent = (visualRemainingHP / bossHP) * 100;
+
+                                // FORCE EMPTY BAR IF DEFEATED
+                                if (remainingHP === 0) visualPercent = 0;
 
                                 const isCleared = remainingHP === 0;
                                 const settings = App.state.systemData.settings || {};
@@ -1277,6 +1280,14 @@
                                         </div>
                                         ${rosterHtml}
                                     </div>
+                                    </div>
+                                </div>
+                                <div class="mb-4 mt-2 border-l-2 border-gray-800 pl-3 py-1 -mt-4 mx-1">
+                                    <div class="text-[9px] text-gray-600 font-mono tracking-tight leading-relaxed">
+                                        <span class="text-gray-500 font-bold">EFFECTS:</span>
+                                        <span class="text-yellow-700/70">TOWER BLESSING (+5 XP/24h)</span> • 
+                                        <span class="text-red-900/70">FATIGUE (50% XP/48h)</span>
+                                    </div>
                                 </div>`;
                             } else if (wisdomQuests.length === 0) {
                                 // INACTIVE STATE
@@ -1334,11 +1345,52 @@
                                 </div>`;
                         });
 
+
+
                         // Pre-compute tab-dependent classes
                         const statsClass = App.state.activeTab !== 'quests' ? 'flex flex-col md:flex-row gap-4 md:gap-8' : 'hidden';
                         const questsClass = App.state.activeTab === 'quests' ? 'flex flex-col min-h-0 flex-1' : 'hidden';
                         const statsBtnClass = App.state.activeTab !== 'quests' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent';
                         const questsBtnClass = App.state.activeTab === 'quests' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-white';
+
+                        // Parse Buffs
+                        const buffs = (() => { try { return JSON.parse(hunter.Buffs || '[]'); } catch (e) { return []; } })();
+                        const now = new Date();
+                        const activeBuffs = buffs.filter(b => new Date(b.expiry) > now);
+
+                        let buffsHtml = '';
+                        if (activeBuffs.length > 0) {
+                            buffsHtml = `
+                                <div class="mb-6 pt-4 border-t border-gray-800">
+                                    <div class="text-[9px] text-gray-600 uppercase font-bold mb-2 tracking-widest">Active Effects</div>
+                                    <div class="space-y-1">
+                                        ${activeBuffs.map(b => {
+                                const isVictory = b.type === 'VICTORY';
+                                const color = isVictory ? 'text-yellow-400 border-yellow-500/30 bg-yellow-900/10' : 'text-red-400 border-red-500/30 bg-red-900/10';
+                                const icon = isVictory ? '🏆' : '💀';
+                                const label = isVictory ? 'TOWER BLESSING' : 'FATIGUE';
+                                const detail = isVictory ? '+5 Bonus XP' : '50% XP Reduction';
+
+                                const diffMs = new Date(b.expiry) - now;
+                                const hrs = Math.floor(diffMs / (1000 * 60 * 60));
+                                const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                                const timeString = `${hrs}h ${mins}m`;
+
+                                return `
+                                            <div class="flex flex-col p-1.5 rounded border ${color}">
+                                                <div class="flex justify-between items-center mb-0.5">
+                                                    <div class="flex items-center gap-2">
+                                                        <span class="opacity-70 text-[10px]">${icon}</span>
+                                                        <span class="text-[10px] font-bold tracking-wide">${label}</span>
+                                                    </div>
+                                                    <div class="text-[9px] font-mono opacity-60 tracking-tight">${timeString}</div>
+                                                </div>
+                                                <div class="text-[9px] opacity-80 pl-4.5 font-mono">${detail}</div>
+                                            </div>`;
+                            }).join('')}
+                                    </div>
+                                </div>`;
+                        }
 
                         const html = `
                 <div class="bg-gray-900/95 md:bg-gray-900/90 border border-gray-700 p-4 md:p-8 rounded-none md:rounded-2xl shadow-2xl backdrop-blur-md relative overflow-hidden animate-fade-in-up min-h-full md:min-h-0" id="profile-container">
@@ -1414,6 +1466,9 @@
                                 </div>
                                 <div class="text-right text-[10px] md:text-xs text-gray-500 pt-2">Total Combat Winnings: <span class="text-yellow-400 font-mono">${totalAPWon} XP</span></div>
                             </div>
+
+                            <!-- BUFFS PANEL -->
+                            ${buffsHtml}
 
                             <!-- Academic Performance Panel (NEW) -->
                             <div class="mt-6 pt-4 border-t border-gray-800">
