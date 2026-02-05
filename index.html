@@ -1160,9 +1160,11 @@
                             const guildHunters = App.state.systemData.hunters[hunter.Guild] || [];
 
                             // Only count Wisdom quests ASSIGNED to this hunter's guild
-                            const wisdomQuests = (App.state.systemData.quests || []).filter(q =>
-                                q.Category === 'WISDOM' && q.AssignedGuild === hunter.Guild
-                            );
+                            const wisdomQuests = (App.state.systemData.quests || []).filter(q => {
+                                const assigned = (q.AssignedGuild || '').trim();
+                                return q.Category === 'WISDOM' &&
+                                    (assigned === 'ALL' || assigned === hunter.Guild || (assigned && assigned.split(',').map(s => s.trim()).includes(hunter.Guild)));
+                            });
                             const totalWisdomXP = wisdomQuests.reduce((sum, q) => sum + (Number(q.TotalXP) || 0), 0);
 
                             // Boss HP = (Total Wisdom XP) * (Num Hunters) * 0.90
@@ -1194,7 +1196,21 @@
 
                                 // Remaining HP (bar goes DOWN as damage increases)
                                 const remainingHP = Math.max(0, bossHP - damage);
-                                const remainingPercent = (remainingHP / bossHP) * 100;
+
+                                // Phase tracking: When new quests are added (bossHP increases), reset visual bar to 100%
+                                window.dungeonPhaseState = window.dungeonPhaseState || {};
+                                const phaseKey = hunter.Guild;
+                                const lastPhase = window.dungeonPhaseState[phaseKey] || { hp: 0, baseDamage: 0 };
+
+                                if (bossHP > lastPhase.hp) {
+                                    window.dungeonPhaseState[phaseKey] = { hp: bossHP, baseDamage: damage };
+                                }
+
+                                const currentPhase = window.dungeonPhaseState[phaseKey];
+                                const phaseDamage = damage - currentPhase.baseDamage;
+                                const visualRemainingHP = Math.max(0, bossHP - phaseDamage);
+                                const visualPercent = (visualRemainingHP / bossHP) * 100;
+
                                 const isCleared = remainingHP === 0;
                                 const settings = App.state.systemData.settings || {};
                                 const bossImg = settings['boss_photo'] ? App.Helpers.getDirectGdriveUrl(settings['boss_photo']) : 'https://placehold.co/600x400/581c87/ffffff?text=DUNGEON+BOSS';
@@ -1251,7 +1267,7 @@
                                              <span class="text-white font-mono">${remainingHP.toLocaleString()} / ${bossHP.toLocaleString()}</span>
                                         </div>
                                         <div class="h-3 bg-gray-950 rounded-full overflow-hidden border border-gray-700 relative">
-                                             <div class="h-full ${isCleared ? 'bg-yellow-500' : 'bg-red-600'} transition-all duration-1000 relative" style="width: ${remainingPercent}%">
+                                             <div class="h-full ${isCleared ? 'bg-yellow-500' : 'bg-red-600'} transition-all duration-1000 relative" style="width: ${visualPercent}%">
                                                   <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
                                              </div>
                                         </div>
@@ -1285,6 +1301,38 @@
                                 </div>`;
                             }
                         }
+
+                        // --- EXPLICIT TOWERS (Manually Created) ---
+                        const explicitTowers = (App.state.systemData.dungeonTowers || []).filter(t =>
+                            t.GuildName === 'ALL' || t.GuildName === hunter.Guild
+                        );
+
+                        explicitTowers.forEach(t => {
+                            const settings = App.state.systemData.settings || {};
+                            const bossImg = settings['boss_photo'] ? App.Helpers.getDirectGdriveUrl(settings['boss_photo']) : 'https://placehold.co/600x400/581c87/ffffff?text=CUSTOM+BOSS';
+
+                            dungeonHtml += `
+                                <div class="mb-6 bg-gray-900 border border-purple-900/50 rounded-lg overflow-hidden relative group shrink-0 shadow-lg">
+                                    <div class="h-28 bg-purple-900/20 relative">
+                                        <img src="${bossImg}" class="w-full h-full object-cover opacity-60 grayscale group-hover:grayscale-0 transition-all">
+                                        <div class="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent"></div>
+                                        <div class="absolute bottom-2 left-3">
+                                             <div class="text-[9px] text-purple-300 font-bold tracking-wider uppercase mb-0 shadow-black drop-shadow-md">CUSTOM RAID</div>
+                                             <div class="text-lg font-black text-white cinzel shadow-black drop-shadow-md">${t.Title}</div>
+                                             <div class="text-[9px] text-gray-300 font-mono">${t.GuildName} // Mod ${t.ModuleNumber}</div>
+                                        </div>
+                                    </div>
+                                     <div class="p-3">
+                                        <div class="flex justify-between text-[10px] mb-1">
+                                            <span class="text-gray-400">BOSS HP</span>
+                                            <span class="text-white font-mono">${(t.CurrentDamage || 0).toLocaleString()} / ${(t.BossHP || 1000).toLocaleString()}</span>
+                                        </div>
+                                         <div class="h-3 bg-gray-950 rounded-full overflow-hidden border border-gray-700 relative">
+                                            <div class="h-full bg-purple-600 transition-all duration-1000 relative" style="width: ${Math.min(100, ((t.CurrentDamage || 0) / (t.BossHP || 1000)) * 100)}%"></div>
+                                        </div>
+                                     </div>
+                                </div>`;
+                        });
 
                         // Pre-compute tab-dependent classes
                         const statsClass = App.state.activeTab !== 'quests' ? 'flex flex-col md:flex-row gap-4 md:gap-8' : 'hidden';
