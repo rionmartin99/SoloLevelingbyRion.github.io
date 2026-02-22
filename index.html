@@ -1,3 +1,7 @@
+<!--
+CHANGELOG:
+v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the latest WISDOM quest. Removed visual phase hacks. Added memoization to getDirectGdriveUrl for massive frontend performance optimization.
+-->
 <!DOCTYPE html>
 <html lang="en">
 
@@ -836,8 +840,8 @@
                                         // 2. Level Up Detection Logic
                                         if (xpGainMatch && hunter) {
                                             const gainedXp = parseInt(xpGainMatch[1]);
-                                            // Use hunter.XP (Total) from latest sync. 
-                                            const currentXp = hunter.XP;
+                                            // Use hunter.LifetimeXP (Total) from latest sync. 
+                                            const currentXp = hunter.LifetimeXP !== undefined ? hunter.LifetimeXP : hunter.XP;
                                             const previousXp = Math.max(0, currentXp - gainedXp); // Prevent negative
 
                                             // Legendary Curve Formula: 3.16 * XP^0.4
@@ -1160,11 +1164,12 @@
                             const guildHunters = App.state.systemData.hunters[hunter.Guild] || [];
 
                             // Only count Wisdom quests ASSIGNED to this hunter's guild
-                            const wisdomQuests = (App.state.systemData.quests || []).filter(q => {
+                            const allWisdomQuests = (App.state.systemData.quests || []).filter(q => {
                                 const assigned = (q.AssignedGuild || '').trim();
                                 return q.Category === 'WISDOM' &&
                                     (assigned === 'ALL' || assigned === hunter.Guild || (assigned && assigned.split(',').map(s => s.trim()).includes(hunter.Guild)));
                             });
+                            const wisdomQuests = allWisdomQuests.length > 0 ? [allWisdomQuests[allWisdomQuests.length - 1]] : [];
                             const totalWisdomXP = wisdomQuests.reduce((sum, q) => sum + (Number(q.TotalXP) || 0), 0);
 
                             // Boss HP = (Total Wisdom XP) * (Num Hunters) * 0.90
@@ -1196,20 +1201,7 @@
 
                                 // Remaining HP (bar goes DOWN as damage increases)
                                 const remainingHP = Math.max(0, bossHP - damage);
-
-                                // Phase tracking: When new quests are added (bossHP increases), reset visual bar to 100%
-                                window.dungeonPhaseState = window.dungeonPhaseState || {};
-                                const phaseKey = hunter.Guild;
-                                const lastPhase = window.dungeonPhaseState[phaseKey] || { hp: 0, baseDamage: 0 };
-
-                                if (bossHP > lastPhase.hp) {
-                                    window.dungeonPhaseState[phaseKey] = { hp: bossHP, baseDamage: damage };
-                                }
-
-                                const currentPhase = window.dungeonPhaseState[phaseKey];
-                                const phaseDamage = damage - currentPhase.baseDamage;
-                                const visualRemainingHP = Math.max(0, bossHP - phaseDamage);
-                                let visualPercent = (visualRemainingHP / bossHP) * 100;
+                                let visualPercent = (remainingHP / bossHP) * 100;
 
                                 // FORCE EMPTY BAR IF DEFEATED
                                 if (remainingHP === 0) visualPercent = 0;
@@ -1446,12 +1438,20 @@
                             <div class="space-y-6 md:space-y-8">
                                 <div>
                                     <div class="flex justify-between text-blue-400 font-bold text-xs md:text-sm mb-2 tracking-widest">
-                                        <span>EXPERIENCE</span>
+                                        <span>LIFETIME XP</span>
+                                        <span class="text-white font-mono">${hunter.LifetimeXP !== undefined ? hunter.LifetimeXP : hunter.XP} XP</span>
+                                    </div>
+                                    <div class="h-4 md:h-6 bg-gray-900 rounded-sm overflow-hidden border border-gray-700 shadow-inner mb-4">
+                                        <div class="h-full bg-blue-600 shadow-[0_0_20px_rgba(37,99,235,0.6)] relative overflow-hidden" style="width: ${((hunter.LifetimeXP !== undefined ? hunter.LifetimeXP : hunter.XP) % 500) / 5}%">
+                                            <div class="absolute inset-0 bg-white/20 w-full h-full animate-pulse"></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-between text-emerald-400 font-bold text-[10px] md:text-xs mb-1 tracking-widest">
+                                        <span>SEASONAL XP</span>
                                         <span class="text-white font-mono">${hunter.XP} XP</span>
                                     </div>
-                                    <div class="h-4 md:h-6 bg-gray-900 rounded-sm overflow-hidden border border-gray-700 shadow-inner">
-                                        <div class="h-full bg-blue-600 shadow-[0_0_20px_rgba(37,99,235,0.6)] relative overflow-hidden" style="width: ${(hunter.XP % 500) / 5}%">
-                                            <div class="absolute inset-0 bg-white/20 w-full h-full animate-pulse"></div>
+                                    <div class="h-1.5 md:h-2 bg-gray-900 rounded-sm overflow-hidden border border-gray-700 shadow-inner">
+                                        <div class="h-full bg-emerald-600 shadow-[0_0_20px_rgba(5,150,105,0.3)] relative overflow-hidden" style="width: ${(hunter.XP % 500) / 5}%">
                                         </div>
                                     </div>
                                 </div>
@@ -1975,7 +1975,8 @@
 
                                 // Calculate Level
                                 h.XP = Number(h.XP || 0);
-                                h.Level = Math.floor(3.16 * Math.pow(h.XP, 0.4)) + 1;
+                                h.LifetimeXP = h.LifetimeXP !== undefined ? Number(h.LifetimeXP) : h.XP;
+                                h.Level = Math.floor(3.16 * Math.pow(h.LifetimeXP, 0.4)) + 1;
                             });
                         }
                         if (data.quests) {
