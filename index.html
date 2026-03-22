@@ -1708,9 +1708,51 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                                 clonedElem.style.minHeight = '794px';
                                 clonedElem.style.maxHeight = '794px';
                                 clonedElem.style.margin = '0';
-                                // Tweak padding slightly for the expanded A4 scale
-                                clonedElem.classList.remove('p-8', 'pt-12', 'pb-24');
-                                clonedElem.classList.add('p-12', 'pt-16', 'pb-16');
+                                
+                                // Tweak padding for A4
+                                clonedElem.classList.remove('p-8', 'pt-12', 'pb-24', 'p-12', 'pt-16', 'pb-16');
+                                clonedElem.classList.add('px-32', 'pt-24', 'pb-24');
+                                
+                                // Scale up fonts for the bigger canvas
+                                const title = clonedElem.querySelector('h2.cinzel');
+                                if (title) { title.classList.remove('md:text-5xl'); title.classList.add('md:text-[60px]', 'md:mb-10'); }
+                                
+                                const certSubLabel = clonedElem.querySelector('h3');
+                                if(certSubLabel) { certSubLabel.classList.remove('md:text-sm'); certSubLabel.classList.add('md:text-[20px]'); }
+                                
+                                const awardedTo = clonedElem.querySelector('.text-gray-500.uppercase');
+                                if(awardedTo) { awardedTo.classList.remove('md:text-xs'); awardedTo.classList.add('md:text-[18px]'); }
+                                
+                                const nameEl = clonedElem.querySelector('h1.cinzel');
+                                if (nameEl) { nameEl.classList.remove('md:text-6xl'); nameEl.classList.add('md:text-[86px]', 'md:mb-16', 'md:leading-snug'); }
+                                
+                                const citation = clonedElem.querySelector('p.italic');
+                                if (citation) { citation.classList.remove('md:text-xl', 'max-w-lg'); citation.classList.add('md:text-[28px]', 'max-w-4xl', 'md:leading-relaxed'); }
+                                
+                                // Signatures positioning & sizing
+                                const sigArea = clonedElem.querySelector('.border-t.border-gray-300');
+                                if (sigArea) {
+                                    sigArea.classList.remove('md:px-12');
+                                    sigArea.classList.add('md:px-32'); // Push signatures closer to the middle
+                                    
+                                    const sigTops = sigArea.querySelectorAll('.font-mono.font-bold');
+                                    sigTops.forEach(el => { el.classList.remove('md:text-sm'); el.classList.add('md:text-[22px]', 'pb-3'); });
+                                    
+                                    const sigBots = sigArea.querySelectorAll('.text-gray-700.tracking-widest');
+                                    sigBots.forEach(el => { el.classList.remove('md:text-[10px]'); el.classList.add('md:text-[16px]', 'pt-2'); });
+                                }
+                                
+                                // Scale Logo slightly
+                                const logoContainer = clonedElem.querySelector('.rounded-full.bg-white');
+                                if (logoContainer) {
+                                    logoContainer.classList.remove('md:h-24', 'md:w-24');
+                                    logoContainer.classList.add('md:h-32', 'md:w-32', 'md:-bottom-12');
+                                    const logoImg = logoContainer.querySelector('img');
+                                    if(logoImg) {
+                                        logoImg.classList.remove('md:h-20', 'md:w-20');
+                                        logoImg.classList.add('md:h-24', 'md:w-24');
+                                    }
+                                }
                             }
                         }).then(canvas => {
                             const { jsPDF } = window.jspdf;
