@@ -22,6 +22,7 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- html2canvas for Certificates -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@400;600;800&display=swap"
         rel="stylesheet">
@@ -1410,20 +1411,20 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                             }
                     <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-600 via-purple-500 to-blue-600 animate-pulse"></div>
                     
-                    <div class="flex justify-between items-center mb-4 md:mb-6 border-b border-gray-700 pb-4 gap-4">
-                        <div class="flex flex-col items-start gap-2">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 border-b border-gray-700 pb-4 gap-4 w-full">
+                        <div class="flex flex-col items-start gap-2 w-full md:w-auto">
                              ${App.state.isLoggedIn ?
-                                `<button onclick="App.Profile.close()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-3 py-1.5 rounded-full text-[10px] md:text-xs font-bold border border-gray-600 flex items-center gap-2 transition-colors group">
-                                    <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                                `<button onclick="App.Profile.close()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-2 py-1 md:px-3 md:py-1.5 rounded-full text-[9px] md:text-xs font-bold border border-gray-600 flex items-center gap-1 md:gap-2 transition-colors group">
+                                    <svg class="w-3 h-3 md:w-4 md:h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                                     BACK TO MENU
                                 </button>` : ''
                             }
-                            <div class="text-[10px] md:text-xs text-gray-500 font-mono">ID: ${hunter.ID} // <span class="text-blue-400 animate-pulse">ONLINE</span></div>
+                            <div class="text-[9px] md:text-xs text-gray-500 font-mono">ID: ${hunter.ID} // <span class="text-blue-400 animate-pulse">ONLINE</span></div>
                         </div>
-                        <div class="flex gap-2 md:gap-4 pr-0 md:pr-8">
-                            <button onclick="App.Profile.switchTab('stats')" id="btn-stats" class="text-sm font-bold ${statsBtnClass} uppercase border-b-2 px-2 py-1 transition-colors">STATUS</button>
-                            <button onclick="App.Profile.switchTab('quests')" id="btn-quests" class="text-sm font-bold ${questsBtnClass} uppercase border-b-2 px-2 py-1 transition-colors">MISSIONS</button>
-                            ${hasCerts ? `<button onclick="App.Profile.switchTab('recognitions')" id="btn-recognitions" class="text-sm font-bold ${recognitionsBtnClass} uppercase border-b-2 px-2 py-1 transition-colors">RECOGNITIONS</button>` : ''}
+                        <div class="flex gap-2 md:gap-4 pr-0 md:pr-8 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 items-center">
+                            <button onclick="App.Profile.switchTab('stats')" id="btn-stats" class="text-[10px] md:text-sm font-bold ${statsBtnClass} uppercase border-b-2 px-1 py-1 md:px-2 transition-colors whitespace-nowrap">STATUS</button>
+                            <button onclick="App.Profile.switchTab('quests')" id="btn-quests" class="text-[10px] md:text-sm font-bold ${questsBtnClass} uppercase border-b-2 px-1 py-1 md:px-2 transition-colors whitespace-nowrap">MISSIONS</button>
+                            ${hasCerts ? `<button onclick="App.Profile.switchTab('recognitions')" id="btn-recognitions" class="text-[10px] md:text-sm font-bold ${recognitionsBtnClass} uppercase border-b-2 px-1 py-1 md:px-2 transition-colors whitespace-nowrap">RECOGNITIONS</button>` : ''}
                         </div>
                     </div>
 
@@ -1690,20 +1691,41 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                     downloadCertificate(certId, hunterName) {
                         const elem = document.getElementById('cert-' + certId);
                         if (!elem) return;
-                        App.UI.showToast("Generating Image...", false);
+                        App.UI.showToast("Generating PDF...", false);
+                        
                         html2canvas(elem, {
                             backgroundColor: '#ffffff',
-                            scale: 2,
-                            useCORS: true
+                            scale: 2, // High resolution
+                            useCORS: true,
+                            windowWidth: 1200, // Force desktop media queries
+                            onclone: (clonedDoc) => {
+                                // Force the cloned element into perfect A4 landscape dimensions
+                                const clonedElem = clonedDoc.getElementById('cert-' + certId);
+                                clonedElem.style.width = '1123px';
+                                clonedElem.style.minWidth = '1123px';
+                                clonedElem.style.maxWidth = '1123px';
+                                clonedElem.style.height = '794px';
+                                clonedElem.style.minHeight = '794px';
+                                clonedElem.style.maxHeight = '794px';
+                                clonedElem.style.margin = '0';
+                                // Tweak padding slightly for the expanded A4 scale
+                                clonedElem.classList.remove('p-8', 'pt-12', 'pb-24');
+                                clonedElem.classList.add('p-12', 'pt-16', 'pb-16');
+                            }
                         }).then(canvas => {
-                            const link = document.createElement('a');
-                            link.download = `Certificate_${hunterName}.png`;
-                            link.href = canvas.toDataURL("image/png");
-                            link.click();
+                            const { jsPDF } = window.jspdf;
+                            const pdf = new jsPDF({
+                                orientation: 'landscape',
+                                unit: 'px',
+                                format: [1123, 794]
+                            });
+                            
+                            pdf.addImage(canvas.toDataURL("image/jpeg", 0.98), 'JPEG', 0, 0, 1123, 794);
+                            pdf.save(`Certificate_${hunterName}.pdf`);
                             App.UI.showToast("Download Complete!", false);
                         }).catch(err => {
                             console.error(err);
-                            App.UI.showToast("Failed to generate image", true);
+                            App.UI.showToast("Failed to generate PDF", true);
                         });
                     },
                     
