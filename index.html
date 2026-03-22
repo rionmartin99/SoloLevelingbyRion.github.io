@@ -1,5 +1,6 @@
 <!--
 CHANGELOG:
+v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to replace external placehold.co images.
 v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the latest WISDOM quest. Removed visual phase hacks. Added memoization to getDirectGdriveUrl for massive frontend performance optimization.
 -->
 <!DOCTYPE html>
@@ -10,12 +11,17 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Solo Leveling | Hunter Terminal</title>
+    <script>
+        const DEFAULT_AVATAR_B64 = "data:image/jpeg;base64,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";
+    </script>
 
     <!-- EXTERNAL LIBRARIES -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <!-- Chart.js for Analytics Charts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2canvas for Certificates -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <link
         href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@400;600;800&display=swap"
         rel="stylesheet">
@@ -1072,7 +1078,7 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
 
                     async render(hunter) {
                         // NON-BLOCKING RENDER: Show UI immediately with placeholder, then fetch image
-                        const defaultImg = "https://placehold.co/400x400/1e293b/ffffff?text=NO+IMAGE";
+                        const defaultImg = DEFAULT_AVATAR_B64;
 
                         // Async Image Fetch (runs in background)
                         if (hunter.PhotoURL) {
@@ -1340,10 +1346,22 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
 
 
                         // Pre-compute tab-dependent classes
-                        const statsClass = App.state.activeTab !== 'quests' ? 'flex flex-col md:flex-row gap-4 md:gap-8' : 'hidden';
-                        const questsClass = App.state.activeTab === 'quests' ? 'flex flex-col min-h-0 flex-1' : 'hidden';
-                        const statsBtnClass = App.state.activeTab !== 'quests' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent';
-                        const questsBtnClass = App.state.activeTab === 'quests' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-white';
+                        const hasCerts = (hunter.Certificates && hunter.Certificates.length > 0);
+                        if (!['stats', 'quests', 'recognitions'].includes(App.state.activeTab) || (App.state.activeTab === 'recognitions' && !hasCerts)) {
+                            App.state.activeTab = 'stats';
+                        }
+                        
+                        const isS = App.state.activeTab === 'stats';
+                        const isQ = App.state.activeTab === 'quests';
+                        const isR = App.state.activeTab === 'recognitions';
+                        
+                        const statsClass = isS ? 'flex flex-col md:flex-row gap-4 md:gap-8' : 'hidden';
+                        const questsClass = isQ ? 'flex flex-col min-h-0 flex-1' : 'hidden';
+                        const recognitionsClass = isR ? 'pb-20 overflow-y-auto min-h-0 flex-1' : 'hidden';
+                        
+                        const statsBtnClass = isS ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-white';
+                        const questsBtnClass = isQ ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-white';
+                        const recognitionsBtnClass = isR ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-white';
 
                         // Parse Buffs
                         const buffs = (() => { try { return JSON.parse(hunter.Buffs || '[]'); } catch (e) { return []; } })();
@@ -1406,6 +1424,7 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                         <div class="flex gap-2 md:gap-4 pr-0 md:pr-8">
                             <button onclick="App.Profile.switchTab('stats')" id="btn-stats" class="text-sm font-bold ${statsBtnClass} uppercase border-b-2 px-2 py-1 transition-colors">STATUS</button>
                             <button onclick="App.Profile.switchTab('quests')" id="btn-quests" class="text-sm font-bold ${questsBtnClass} uppercase border-b-2 px-2 py-1 transition-colors">MISSIONS</button>
+                            ${hasCerts ? `<button onclick="App.Profile.switchTab('recognitions')" id="btn-recognitions" class="text-sm font-bold ${recognitionsBtnClass} uppercase border-b-2 px-2 py-1 transition-colors">RECOGNITIONS</button>` : ''}
                         </div>
                     </div>
 
@@ -1548,6 +1567,10 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                         <div class="overflow-y-auto pr-2 quest-scroll flex-grow">${questListHtml}</div>
                     </div>
                     
+                    <div class="${recognitionsClass}" id="view-recognitions">
+                        ${hasCerts ? App.Profile.renderCertificatesHTML(hunter) : ''}
+                    </div>
+                    
                     ${App.state.isLoggedIn ? `
                         <div id="logout-trigger" class="mt-8 mb-4 flex justify-center opacity-0 transition-opacity duration-500">
                             <button onclick="App.Profile.logout()" class="bg-red-900/20 hover:bg-red-900/50 border border-red-900/50 text-red-500 px-6 py-2 rounded uppercase text-xs font-bold tracking-widest transition-all">
@@ -1591,38 +1614,119 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                     },
 
                     switchTab(tabName) {
-                        App.state.activeTab = tabName; // Update State
+                        App.state.activeTab = tabName;
 
                         const stats = document.getElementById('view-stats');
                         const quests = document.getElementById('view-quests');
+                        const recognitions = document.getElementById('view-recognitions');
                         const btnStats = document.getElementById('btn-stats');
                         const btnQuests = document.getElementById('btn-quests');
+                        const btnRecognitions = document.getElementById('btn-recognitions');
 
-                        if (tabName === 'stats') {
-                            // Show Stats, Hide Quests
-                            stats.className = 'flex flex-col md:flex-row gap-4 md:gap-8';
-                            quests.className = 'hidden';
+                        if (stats) stats.className = tabName === 'stats' ? 'flex flex-col md:flex-row gap-4 md:gap-8' : 'hidden';
+                        if (quests) quests.className = tabName === 'quests' ? 'flex flex-col min-h-0 flex-1' : 'hidden';
+                        if (recognitions) recognitions.className = tabName === 'recognitions' ? 'pb-20 overflow-y-auto min-h-0 flex-1' : 'hidden';
 
-                            // Activate Stats Button
-                            btnStats.classList.add('text-white', 'border-blue-500');
-                            btnStats.classList.remove('text-gray-500', 'border-transparent');
+                        const makeActive = (btn) => { if(btn){ btn.classList.add('text-white', 'border-blue-500'); btn.classList.remove('text-gray-500', 'border-transparent'); } };
+                        const makeInactive = (btn) => { if(btn){ btn.classList.remove('text-white', 'border-blue-500'); btn.classList.add('text-gray-500', 'border-transparent'); } };
 
-                            // Deactivate Quests Button
-                            btnQuests.classList.remove('text-white', 'border-blue-500');
-                            btnQuests.classList.add('text-gray-500', 'border-transparent');
-                        } else {
-                            // Hide Stats, Show Quests
-                            stats.className = 'hidden';
-                            quests.className = 'flex flex-col min-h-0 flex-1';
-
-                            // Deactivate Stats Button
-                            btnStats.classList.remove('text-white', 'border-blue-500');
-                            btnStats.classList.add('text-gray-500', 'border-transparent');
-
-                            // Activate Quests
-                            btnQuests.classList.add('text-white', 'border-blue-500');
-                            btnQuests.classList.remove('text-gray-500', 'border-transparent');
-                        }
+                        if(tabName === 'stats') { makeActive(btnStats); makeInactive(btnQuests); makeInactive(btnRecognitions); }
+                        else if(tabName === 'quests') { makeInactive(btnStats); makeActive(btnQuests); makeInactive(btnRecognitions); }
+                        else if(tabName === 'recognitions') { makeInactive(btnStats); makeInactive(btnQuests); makeActive(btnRecognitions); }
+                    },
+                    
+                    renderCertificatesHTML(hunter) {
+                        if (!hunter.Certificates || hunter.Certificates.length === 0) return '';
+                        return hunter.Certificates.map(c => `
+                            <div class="mb-10 relative group pt-4" id="cert-container-${c.id}">
+                                <div id="cert-${c.id}" class="bg-gradient-to-br from-gray-950 via-gray-900 to-black border-4 border-yellow-600/60 p-8 pt-12 rounded-sm shadow-[0_0_30px_rgba(234,179,8,0.2)] text-center relative overflow-hidden" style="width: 100%; max-width: 800px; margin: 0 auto; min-height: 480px;">
+                                    <div class="absolute inset-2 border-2 border-yellow-500/30 rounded-sm pointer-events-none"></div>
+                                    <div class="absolute -top-10 -left-10 w-40 h-40 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                                    <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                                    
+                                    <div class="mb-8 flex justify-center items-center gap-4">
+                                        <div class="h-[1px] w-12 md:w-24 bg-gradient-to-r from-transparent to-yellow-500"></div>
+                                        <h3 class="text-yellow-500 font-bold tracking-[0.3em] uppercase text-[10px] md:text-sm">CERTIFICATE OF RECOGNITION</h3>
+                                        <div class="h-[1px] w-12 md:w-24 bg-gradient-to-l from-transparent to-yellow-500"></div>
+                                    </div>
+                                    
+                                    <h2 class="cinzel text-3xl md:text-5xl font-black text-white mb-8 tracking-wide drop-shadow-md pb-4">${c.title}</h2>
+                                    
+                                    <div class="text-gray-400 font-mono text-[10px] md:text-xs uppercase tracking-widest mb-2">Awarded To</div>
+                                    <h1 class="cinzel text-4xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-100 to-yellow-300 font-black tracking-tighter shadow-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.4)] mb-8 md:mb-12 mt-2 leading-tight">${hunter.Name.toUpperCase()}</h1>
+                                    
+                                    <p class="text-gray-300 italic max-w-lg mx-auto leading-relaxed md:text-xl mb-12 md:mb-20 relative z-10 px-4">${c.citation}</p>
+                                    
+                                    <div class="flex justify-between items-end mt-auto pt-8 px-4 md:px-12 border-t border-gray-800/50 relative z-10">
+                                        <div class="text-left w-1/3">
+                                            <div class="border-b border-gray-600 pb-1 mb-1 font-mono text-gray-300 text-sm">${new Date(c.date).toLocaleDateString()}</div>
+                                            <div class="text-[9px] text-gray-500 uppercase tracking-widest">Date Issued</div>
+                                        </div>
+                                        
+                                        <div class="w-16 h-16 md:w-24 md:h-24 rounded-full border-4 border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.5)] flex items-center justify-center bg-gray-900 absolute left-1/2 transform -translate-x-1/2 -bottom-4 md:-bottom-6">
+                                            <span class="cinzel font-black text-yellow-500 text-2xl md:text-4xl drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">${hunter.Rank}</span>
+                                        </div>
+                                        
+                                        <div class="text-right w-1/3">
+                                            <div class="border-b border-gray-600 pb-1 mb-1 font-mono text-gray-300 text-sm">ARCHITECT</div>
+                                            <div class="text-[9px] text-gray-500 uppercase tracking-widest">Authorized By</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4 flex justify-center gap-4 transition-opacity md:opacity-0 group-hover:opacity-100 pb-12">
+                                    <button onclick="App.Profile.downloadCertificate('${c.id}', '${hunter.Name.replace(/[^a-zA-Z0-9]/g, '_')}')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-6 rounded text-xs uppercase tracking-widest transition-colors flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                        Download Image
+                                    </button>
+                                    <button onclick="App.Profile.deleteCertificate('${hunter.ID}', '${c.id}')" class="bg-red-900/40 hover:bg-red-600 text-red-500 hover:text-white font-bold py-2 px-6 rounded border border-red-500/50 text-xs uppercase tracking-widest transition-colors flex items-center gap-2">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        `).join('');
+                    },
+                    
+                    downloadCertificate(certId, hunterName) {
+                        const elem = document.getElementById('cert-' + certId);
+                        if (!elem) return;
+                        App.UI.showToast("Generating Image...", false);
+                        html2canvas(elem, {
+                            backgroundColor: '#000000',
+                            scale: 2,
+                            useCORS: true
+                        }).then(canvas => {
+                            const link = document.createElement('a');
+                            link.download = `Certificate_${hunterName}.png`;
+                            link.href = canvas.toDataURL("image/png");
+                            link.click();
+                            App.UI.showToast("Download Complete!", false);
+                        }).catch(err => {
+                            console.error(err);
+                            App.UI.showToast("Failed to generate image", true);
+                        });
+                    },
+                    
+                    deleteCertificate(hunterId, certId) {
+                        const res = confirm("Are you sure you want to permanently delete this certificate?");
+                        if (!res) return;
+                        
+                        document.getElementById('cert-container-' + certId).style.display = 'none';
+                        App.UI.showToast("Deleting Certificate...");
+                        
+                        fetch(API_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                op: 'deleteCertificate',
+                                hunterId: hunterId,
+                                certId: certId
+                            })
+                        }).then(() => {
+                            App.UI.showToast("Certificate Deleted");
+                        });
                     }
                 },
 
@@ -1700,7 +1804,7 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                                         <td class="p-2 md:p-4 text-center font-bold text-gray-400 text-sm md:text-base">${i + 1}</td>
                                         <td class="p-2 md:p-4 flex items-center gap-2 md:gap-3">
                                             <div class="w-8 h-8 md:w-8 md:h-8 rounded bg-gray-800 overflow-hidden border border-gray-700 shrink-0">
-                                                <img data-src="${h.PhotoURL || ''}" src="https://placehold.co/100x100/1f2937/4b5563?text=..." class="leaderboard-photo w-full h-full object-cover">
+                                                <img data-src="${h.PhotoURL || ''}" src="${DEFAULT_AVATAR_B64}" class="leaderboard-photo w-full h-full object-cover">
                                             </div>
                                             <div class="min-w-0">
                                                 <div class="font-bold text-white text-xs md:text-base truncate">${h.Name}</div>
