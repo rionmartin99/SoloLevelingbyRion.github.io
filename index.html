@@ -1278,7 +1278,6 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                                         </div>
                                         ${rosterHtml}
                                     </div>
-                                    </div>
                                 </div>
                                 <div class="mb-4 mt-2 border-l-2 border-gray-800 pl-3 py-1 -mt-4 mx-1">
                                     <div class="text-[9px] text-gray-600 font-mono tracking-tight leading-relaxed">
@@ -1639,37 +1638,37 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                         if (!hunter.Certificates || hunter.Certificates.length === 0) return '';
                         return hunter.Certificates.map(c => `
                             <div class="mb-10 relative group pt-4" id="cert-container-${c.id}">
-                                <div id="cert-${c.id}" class="bg-gradient-to-br from-gray-950 via-gray-900 to-black border-4 border-yellow-600/60 p-8 pt-12 rounded-sm shadow-[0_0_30px_rgba(234,179,8,0.2)] text-center relative overflow-hidden" style="width: 100%; max-width: 800px; margin: 0 auto; min-height: 480px;">
+                                <div id="cert-${c.id}" class="bg-gradient-to-br from-white via-gray-50 to-gray-100 border-4 border-yellow-600/60 p-8 pt-12 pb-24 rounded-sm shadow-[0_0_40px_rgba(0,0,0,0.1)] text-center relative flex flex-col items-center justify-between" style="width: 100%; max-width: 800px; margin: 0 auto; min-width: 320px; min-height: 540px;">
                                     <div class="absolute inset-2 border-2 border-yellow-500/30 rounded-sm pointer-events-none"></div>
-                                    <div class="absolute -top-10 -left-10 w-40 h-40 bg-yellow-500/10 rounded-full blur-3xl pointer-events-none"></div>
-                                    <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
                                     
-                                    <div class="mb-8 flex justify-center items-center gap-4">
-                                        <div class="h-[1px] w-12 md:w-24 bg-gradient-to-r from-transparent to-yellow-500"></div>
-                                        <h3 class="text-yellow-500 font-bold tracking-[0.3em] uppercase text-[10px] md:text-sm">CERTIFICATE OF RECOGNITION</h3>
-                                        <div class="h-[1px] w-12 md:w-24 bg-gradient-to-l from-transparent to-yellow-500"></div>
+                                    <div class="w-full mb-6">
+                                        <div class="mb-8 flex justify-center items-center gap-4">
+                                            <div class="h-[1px] w-12 md:w-24 bg-gradient-to-r from-transparent to-yellow-600"></div>
+                                            <h3 class="text-yellow-600 font-bold tracking-[0.3em] uppercase text-[10px] md:text-sm drop-shadow-sm">CERTIFICATE OF RECOGNITION</h3>
+                                            <div class="h-[1px] w-12 md:w-24 bg-gradient-to-l from-transparent to-yellow-600"></div>
+                                        </div>
+                                        
+                                        <h2 class="cinzel text-3xl md:text-5xl font-black text-gray-900 mb-6 tracking-wide drop-shadow-sm pb-4">${c.title}</h2>
+                                        
+                                        <div class="text-gray-500 font-mono text-[10px] md:text-xs uppercase tracking-widest mb-2">Awarded To</div>
+                                        <h1 class="cinzel text-4xl md:text-6xl text-yellow-500 font-black tracking-tighter drop-shadow-lg [text-shadow:0_2px_4px_rgba(0,0,0,0.4)] mb-8 md:mb-10 mt-2 leading-tight">${hunter.Name.toUpperCase()}</h1>
+                                        
+                                        <p class="text-gray-800 italic max-w-lg mx-auto leading-relaxed md:text-xl relative z-10 px-4">${c.citation}</p>
                                     </div>
                                     
-                                    <h2 class="cinzel text-3xl md:text-5xl font-black text-white mb-8 tracking-wide drop-shadow-md pb-4">${c.title}</h2>
-                                    
-                                    <div class="text-gray-400 font-mono text-[10px] md:text-xs uppercase tracking-widest mb-2">Awarded To</div>
-                                    <h1 class="cinzel text-4xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-100 to-yellow-300 font-black tracking-tighter shadow-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.4)] mb-8 md:mb-12 mt-2 leading-tight">${hunter.Name.toUpperCase()}</h1>
-                                    
-                                    <p class="text-gray-300 italic max-w-lg mx-auto leading-relaxed md:text-xl mb-12 md:mb-20 relative z-10 px-4">${c.citation}</p>
-                                    
-                                    <div class="flex justify-between items-end mt-auto pt-8 px-4 md:px-12 border-t border-gray-800/50 relative z-10">
-                                        <div class="text-left w-1/3">
-                                            <div class="border-b border-gray-600 pb-1 mb-1 font-mono text-gray-300 text-sm">${new Date(c.date).toLocaleDateString()}</div>
-                                            <div class="text-[9px] text-gray-500 uppercase tracking-widest">Date Issued</div>
+                                    <div class="w-full flex justify-between items-end mt-auto pt-8 px-4 md:px-12 border-t border-gray-300 relative z-10">
+                                        <div class="text-left w-[45%] md:w-1/3">
+                                            <div class="border-b border-gray-400 pb-1 mb-1 font-mono text-gray-900 text-[10px] md:text-sm font-bold leading-tight whitespace-nowrap overflow-visible">${new Date(c.date).toLocaleDateString()}</div>
+                                            <div class="text-[9px] md:text-[10px] text-gray-700 font-bold tracking-widest leading-tight">Date Issued</div>
                                         </div>
                                         
-                                        <div class="w-16 h-16 md:w-24 md:h-24 rounded-full border-4 border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.5)] flex items-center justify-center bg-gray-900 absolute left-1/2 transform -translate-x-1/2 -bottom-4 md:-bottom-6">
-                                            <span class="cinzel font-black text-yellow-500 text-2xl md:text-4xl drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">${hunter.Rank}</span>
+                                        <div class="h-16 w-16 md:h-24 md:w-24 absolute left-1/2 transform -translate-x-1/2 -bottom-4 md:-bottom-6 z-20 flex items-center justify-center bg-white rounded-full shadow-sm ring-4 ring-white/50">
+                                            ${App.state.systemData?.settings?.logo_main ? `<img src="${App.Helpers.getDirectGdriveUrl(App.state.systemData.settings.logo_main)}" class="h-12 w-12 md:h-20 md:w-20 object-contain drop-shadow-md">` : ``}
                                         </div>
                                         
-                                        <div class="text-right w-1/3">
-                                            <div class="border-b border-gray-600 pb-1 mb-1 font-mono text-gray-300 text-sm">ARCHITECT</div>
-                                            <div class="text-[9px] text-gray-500 uppercase tracking-widest">Authorized By</div>
+                                        <div class="text-right w-[45%] md:w-1/3 overflow-visible">
+                                            <div class="border-b border-gray-400 pb-1 mb-1 font-mono text-gray-900 text-[10px] md:text-sm font-bold leading-tight whitespace-nowrap overflow-visible relative right-0 text-right">PHILIP MARION MARTIN</div>
+                                            <div class="text-[9px] md:text-[10px] text-gray-700 font-bold tracking-widest leading-tight relative right-0 text-right">Robotics Subject Teacher</div>
                                         </div>
                                     </div>
                                 </div>
@@ -1693,7 +1692,7 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                         if (!elem) return;
                         App.UI.showToast("Generating Image...", false);
                         html2canvas(elem, {
-                            backgroundColor: '#000000',
+                            backgroundColor: '#ffffff',
                             scale: 2,
                             useCORS: true
                         }).then(canvas => {
