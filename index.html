@@ -1,10 +1,10 @@
 <!--
 CHANGELOG:
+v1.7.35 - 2026-04-01 19:28:00 - UI Update - Redefined XP Ranks: Updated thresholds (81-100: SS-Rank, 61-80: S-Rank, 51-60: A-Rank, 31-50: B-Rank, 21-30: C-Rank, 11-20: D-Rank, 5-10: E-Rank) and renamed "National Level" label to "SS-Rank".
 v1.7.30 - 2026-04-01 12:30:00 - New Feature - Cloud Monster Sprites: Integrated Google Drive/Sheets backend for sprite storage; added 'Cloud Sprite Sync' admin tool to eliminate local file dependencies.
 v1.7.29 - 2026-04-01 01:31:00 - Fix - Quest Monster System: switched SPRITE_BASE from absolute local path to relative path for GitHub compatibility; refreshed all sprite lists to match actual files on disk.
 v1.7.28 - 2026-04-01 00:45:00 - New Feature - Quest Monster System: rank brackets tied to TotalXP points, random monster sprite displayed on quest cards for immersive hunter experience.
 v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to replace external placehold.co images.
-v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the latest WISDOM quest. Removed visual phase hacks. Added memoization to getDirectGdriveUrl for massive frontend performance optimization.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -544,7 +544,7 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                 sprites: ['death.png','dragon_bipedal.png','dragon_quadropedal.png','dragon_rider.png','dragon_skull.png','emerald_shard_dragon.png','female_elf_with_sword.png','green_winged_dragon.png','hell_rider.png','ogre_boss.png','skull_knight.png','witch_elf.png']
             },
             'National Level': {
-                label: 'National Level', minPts: 95, maxPts: 100,
+                label: 'SS-Rank', minPts: 81, maxPts: 100,
                 color: '#fbbf24', glow: 'rgba(251,191,36,0.7)',
                 borderColor: '#f59e0b', tagBg: 'rgba(245,158,11,0.35)',
                 desc: 'Power rivals a nation\'s military. The absolute pinnacle.',
@@ -559,11 +559,11 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
         function getQuestMonster(totalXP, questId) {
             const pts = Number(totalXP) || 0;
             let rk;
-            if (pts >= 95) rk = 'National Level';
-            else if (pts >= 81) rk = 'S-Rank';
-            else if (pts >= 66) rk = 'A-Rank';
-            else if (pts >= 46) rk = 'B-Rank';
-            else if (pts >= 26) rk = 'C-Rank';
+            if (pts >= 81) rk = 'National Level';
+            else if (pts >= 61) rk = 'S-Rank';
+            else if (pts >= 51) rk = 'A-Rank';
+            else if (pts >= 31) rk = 'B-Rank';
+            else if (pts >= 21) rk = 'C-Rank';
             else if (pts >= 11) rk = 'D-Rank';
             else rk = 'E-Rank';
             const data = QUEST_MONSTER_DATA[rk];
