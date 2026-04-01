@@ -1,5 +1,8 @@
 <!--
 CHANGELOG:
+v1.7.30 - 2026-04-01 12:30:00 - New Feature - Cloud Monster Sprites: Integrated Google Drive/Sheets backend for sprite storage; added 'Cloud Sprite Sync' admin tool to eliminate local file dependencies.
+v1.7.29 - 2026-04-01 01:31:00 - Fix - Quest Monster System: switched SPRITE_BASE from absolute local path to relative path for GitHub compatibility; refreshed all sprite lists to match actual files on disk.
+v1.7.28 - 2026-04-01 00:45:00 - New Feature - Quest Monster System: rank brackets tied to TotalXP points, random monster sprite displayed on quest cards for immersive hunter experience.
 v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to replace external placehold.co images.
 v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the latest WISDOM quest. Removed visual phase hacks. Added memoization to getDirectGdriveUrl for massive frontend performance optimization.
 -->
@@ -492,6 +495,94 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
     <script>
         // *** SYSTEM CORE ***
 
+        // ============================================================
+        // QUEST MONSTER SYSTEM — v1.7.28 (Shared between CC and HT)
+        // ============================================================
+        // Relative path — works both locally and on GitHub Pages
+        const SPRITE_BASE = './Sprites Pack/Sorted';
+        const QUEST_MONSTER_DATA = {
+            'E-Rank':  {
+                label: 'E-Rank', minPts: 5,  maxPts: 15,
+                color: '#94a3b8', glow: 'rgba(148,163,184,0.35)',
+                borderColor: '#475569', tagBg: 'rgba(71,85,105,0.4)',
+                desc: 'Barely stronger than a normal human. Fodder in low-level raids.',
+                sprites: ['bird.png','bird_2.png','bird_4.png','blue_blossom.png','blue_blossom_copy_1.png','cobra_lily.png','cobra_lily_copy_1.png','dog2.png','fish.png','fish_2.png','frog.png','frog_2.png','frog_3.png','fungal_cluster.png','fungal_cluster_copy_1.png','fungi.png','mandrake_root.png','mandrake_root_copy_1.png','mushroom_pest.png','mushroom_pest_copy_1.png','mutant_chicken.png','mutant_chicken_copy_1.png','onion_spirit.png','onion_spirit_copy_1.png','rat.png','rotten_tomato.png','rotten_tomato_copy_1.png','slime.png']
+            },
+            'D-Rank': {
+                label: 'D-Rank', minPts: 15, maxPts: 30,
+                color: '#4ade80', glow: 'rgba(74,222,128,0.35)',
+                borderColor: '#16a34a', tagBg: 'rgba(22,163,74,0.25)',
+                desc: 'The average hunter level. Can handle standard goblins with a party.',
+                sprites: ['archer.png','assassin.png','bark_hound.png','bark_hound_copy_1.png','beast_1.png','beast_2.png','bloated_spider.png','bloated_spider_copy_1.png','bow_elf.png','cobra_snake_1.png','cobra_snake_2.png','cobra_snake_3.png','crystal_spider.png','crystal_spider_copy_1.png','dwarf.png','eye_cluster.png','eye_cluster_copy_1.png','eye_pustule_1.png','eye_pustule_2.png','eye_pustule_3.png','eyeball_pile.png','eyeball_pile_copy_1.png','fairy.png','fairy_2.png','fairy_3.png','female_dwarf.png','female_elf_clouch_with_bow.png','female_elf_with_bow.png','female_goblin.png','female_goblin_2.png','ghoul.png','goblin_2.png','goblin_3.png','goblin_4.png','goblin_archer.png','goblin_scout.png','goblin_spook.png','goblin_thief.png','killer_bunny.png','killer_bunny_copy_1.png','male_elf_with_knife.png','mutant_bird.png','mutant_bird_copy_1.png','orc_brigand.png','portly_rat.png','portly_rat_copy_1.png','pumpkin_spider.png','pumpkin_spider_copy_1.png','scythe_insect.png','scythe_insect_copy_1.png','shadow_spider.png','shadow_spider_copy_1.png','sitting_goblin.png','sitting_goblin_copy_1.png','skeletal_bat.png','skeleton.png','skelton.png','skelton_spear.png','skull_crawler.png','skull_crawler_copy_1.png','slime_2.png','slime_3.png','spike_beast.png','spike_beast_copy_1.png','spotted_beetle.png','spotted_beetle_copy_1.png','swamp_slime.png','swamp_slime_copy_1.png','thug.png','undead_drifter.png','vampire_bat.png','vampire_bat_copy_1.png','wild_lynx_1.png','wild_lynx_2.png','wild_lynx_3.png','winged_eye.png','winged_eye_copy_1.png','wolf.png','zombie_girl.png']
+            },
+            'C-Rank': {
+                label: 'C-Rank', minPts: 30, maxPts: 50,
+                color: '#facc15', glow: 'rgba(250,204,21,0.35)',
+                borderColor: '#ca8a04', tagBg: 'rgba(202,138,4,0.25)',
+                desc: 'Mid-tier. Competent enough to lead small strike teams.',
+                sprites: ['armored_crab_1.png','armored_crab_2.png','armored_crab_3.png','basilisk.png','basilisk_2.png','beast_3.png','beast_4.png','bone_serpent_1.png','bone_serpent_2.png','bone_serpent_3.png','bull.png','eye_stalker_crab_1.png','eye_stalker_crab_2.png','eye_stalker_crab_3.png','female_assassin.png','female_mummy.png','female_zombie.png','female_zombie_2.png','fire_lizard.png','fire_lizard_copy_1.png','flame_tome_1.png','flame_tome_2.png','flame_tome_3.png','flying_imp.png','flying_imp_copy_1.png','frost_harpy.png','goblin_defender.png','goblin_mystic_1.png','goblin_mystic_2.png','goblin_mystic_3.png','goblin_pikeman.png','goblin_rider.png','goblin_warrior.png','hat_imp_1.png','hat_imp_2.png','hat_imp_3.png','honey_wasp_1.png','honey_wasp_2.png','honey_wasp_3.png','horn_drake.png','horn_drake_copy_1.png','horned_imp_1.png','horned_imp_2.png','horned_imp_3.png','junk_pile.png','junk_pile_copy_1.png','lizardman.png','lizardman_2.png','magic_book_1.png','magic_book_2.png','magic_book_3.png','magic_lotus.png','magic_lotus_copy_1.png','mammoth_beast_1.png','mammoth_beast_2.png','mammoth_beast_3.png','mandible_beetle_1.png','mandible_beetle_2.png','mandible_beetle_3.png','mantis_warrior.png','mantis_warrior_copy_1.png','minotaur_warrior.png','mummy.png','naga.png','orc_axeman.png','orc_blacksmith.png','orc_halberdier.png','orc_pit_fighter.png','orc_swordsman.png','rock_snake.png','rock_snake_copy_1.png','scorpion.png','shell_snail.png','shell_snail_copy_1.png','shroomball_monkey.png','shroomball_monkey_copy_1.png','skeleton_warrior.png','skeleton_warrior_1.png','skeleton_warrior_2.png','skeleton_warrior_3.png','spear_goblin_1.png','spear_goblin_2.png','spear_goblin_3.png','spider.png','spiked_turtle_1.png','spiked_turtle_2.png','spiked_turtle_3.png','temple_lion_1.png','temple_lion_2.png','temple_lion_3.png','toothy_flower.png','toothy_flower_copy_1.png','toxic_ooze.png','toxic_ooze_copy_1.png','warrior_gnome.png','warrior_gnome_copy_1.png','zombie.png','zombie_2.png']
+            },
+            'B-Rank': {
+                label: 'B-Rank', minPts: 50, maxPts: 65,
+                color: '#fb923c', glow: 'rgba(251,146,60,0.4)',
+                borderColor: '#ea580c', tagBg: 'rgba(234,88,12,0.25)',
+                desc: 'High-tier professionals. A single B-Rank clears multiple C-Rank monsters.',
+                sprites: ['Cockatrice.png','Werewolf.png','banshee.png','brain_parasite.png','brain_parasite_copy_1.png','female_Werewolf.png','female_Werewolf_2.png','female_ogre_mage.png','female_ogre_mage_2.png','gargoyle.png','goblin_beastmaster.png','goblin_boar_rider.png','goblin_shaman.png','greed_demon.png','greed_demon_copy_1.png','griffin.png','griffin_2.png','griffin_3.png','harpy.png','horned_beast.png','horned_beast_copy_1.png','jellyfish.png','jellyfish_2.png','kimera.png','kimera_2.png','kimera_3.png','medusa.png','mermaid.png','merman.png','minotaur.png','multi_eye_slime.png','multi_eye_slime_copy_1.png','multi_head_slime_1.png','multi_head_slime_2.png','multi_head_slime_3.png','orc_mystic.png','orc_sorcerer.png','orc_warlord.png','phantom_ooze_1.png','phantom_ooze_2.png','phantom_ooze_3.png','red_gargoyle.png','robed_warlock_1.png','robed_warlock_2.png','robed_warlock_3.png','robed_warlock_4.png','scull_crab.png','skeleton_paladin_1.png','skeleton_paladin_2.png','skeleton_paladin_3.png','snake.png','swamp_toad.png','swamp_toad_copy_1.png','tentacle_medusa_1.png','tentacle_medusa_2.png','tentacle_medusa_3.png','thread_spider_1.png','thread_spider_2.png','thread_spider_3.png','undead_knight_1.png','undead_knight_2.png','undead_knight_3.png','wax_ghoul.png','wax_ghoul_copy_1.png','winged_fiend.png','winged_fiend_copy_1.png']
+            },
+            'A-Rank': {
+                label: 'A-Rank', minPts: 65, maxPts: 85,
+                color: '#f87171', glow: 'rgba(248,113,113,0.45)',
+                borderColor: '#dc2626', tagBg: 'rgba(220,38,38,0.25)',
+                desc: 'Elite of the hunter world. Peak of what standard technology can measure.',
+                sprites: ['dark_qween.png','giant.png','giant_2.png','halo_watcher_1.png','halo_watcher_2.png','halo_watcher_3.png','lich.png','male_witch_elf.png','naga_queen_1.png','naga_queen_2.png','naga_queen_3.png','ogr_heavy.png','ogre.png','ogre_armor.png','orc_berserker.png','orge_warhmmer.png','pegasus.png','phenix.png','priest.png','qilin.png','saccubus.png','shadow_reaper_1.png','shadow_reaper_2.png','shadow_reaper_3.png','skeleton_king.png','stone_ogre_1.png','stone_ogre_2.png','stone_ogre_3.png','sun_flower.png','sun_flower_copy_1.png','tiger.png','tortoise.png','tortoise_2.png','treant.png','tusk_boar.png','tusk_boar_copy_1.png','unicorn.png','warrior.png','warrior_2.png','warrior_3.png','witch.png','witch_2.png','worker_slime.png','worker_slime_copy_1.png']
+            },
+            'S-Rank': {
+                label: 'S-Rank', minPts: 85, maxPts: 95,
+                color: '#c084fc', glow: 'rgba(192,132,252,0.55)',
+                borderColor: '#9333ea', tagBg: 'rgba(147,51,234,0.3)',
+                desc: 'Unmeasurable rank. The gap rivals the entire lower spectrum.',
+                sprites: ['death.png','dragon_bipedal.png','dragon_quadropedal.png','dragon_rider.png','dragon_skull.png','emerald_shard_dragon.png','female_elf_with_sword.png','green_winged_dragon.png','hell_rider.png','ogre_boss.png','skull_knight.png','witch_elf.png']
+            },
+            'National Level': {
+                label: 'National Level', minPts: 95, maxPts: 100,
+                color: '#fbbf24', glow: 'rgba(251,191,36,0.7)',
+                borderColor: '#f59e0b', tagBg: 'rgba(245,158,11,0.35)',
+                desc: 'Power rivals a nation\'s military. The absolute pinnacle.',
+                sprites: ['Quetzalcoatl_finalboss.png','Quetzalcoatl_finalboss_awaken.png','abomination.png','behemoth.png','dark_qween_boss.png','deep_void_dragon.png','hell_fire_dragon.png','ice_crystal_dragon.png','inferno_sovereign_dragon.png','mindflayer.png','minotaur_boss.png','skelton_king.png','werewolf_2.png']
+            }
+        };
+        function seededRandom(seed) {
+            let h = 0;
+            for (let i = 0; i < seed.length; i++) h = (Math.imul(31, h) + seed.charCodeAt(i)) | 0;
+            return Math.abs(h) / 2147483647;
+        }
+        function getQuestMonster(totalXP, questId) {
+            const pts = Number(totalXP) || 0;
+            let rk;
+            if (pts >= 95) rk = 'National Level';
+            else if (pts >= 81) rk = 'S-Rank';
+            else if (pts >= 66) rk = 'A-Rank';
+            else if (pts >= 46) rk = 'B-Rank';
+            else if (pts >= 26) rk = 'C-Rank';
+            else if (pts >= 11) rk = 'D-Rank';
+            else rk = 'E-Rank';
+            const data = QUEST_MONSTER_DATA[rk];
+            const seed = String(questId || pts);
+            const idx = Math.floor(seededRandom(seed) * data.sprites.length);
+            const spriteName = data.sprites[idx];
+            const folder = rk === 'National Level' ? 'Above S-Rank' : rk;
+
+            // Priority: Cloud Database URL -> Local File Path
+            let spriteUrl = `${SPRITE_BASE}/${folder}/${spriteName}`;
+            const cloudKey = `${folder}/${spriteName}`;
+            if (App.state.systemData.monsterSpriteMap && App.state.systemData.monsterSpriteMap[cloudKey]) {
+                spriteUrl = App.state.systemData.monsterSpriteMap[cloudKey];
+            }
+
+            const displayName = spriteName.replace(/\.png$/i,'').replace(/_copy_\d+$/,'').replace(/_\d+$/,'').replace(/_/g,' ').split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+            return { ...data, rk, spriteUrl, displayName };
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
 
             // === CONFIGURATION ===
@@ -503,7 +594,7 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                 state: {
                     profileTimeout: null, // Timer for auto-close
                     activeTab: 'stats', // Persist tab state
-                    systemData: { hunters: {}, settings: {}, quests: [], logs: [] },
+                    systemData: { hunters: {}, settings: {}, quests: [], logs: [], monsterSprites: [], monsterSpriteMap: {} },
                     html5QrCode: null,
                     currentHunterId: null,
                     scanContext: 'profile',
@@ -668,6 +759,16 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
 
                                 App.Helpers.normalizeData(finalData); // Normalize immediately
                                 App.state.systemData = finalData;
+
+                                // Build Monster Sprite Lookup Map
+                                App.state.systemData.monsterSpriteMap = {};
+                                if (App.state.systemData.monsterSprites) {
+                                    App.state.systemData.monsterSprites.forEach(s => {
+                                        const key = `${s.Rank}/${s.FileName}`;
+                                        App.state.systemData.monsterSpriteMap[key] = s.DriveURL;
+                                    });
+                                }
+
                                 App.UI.updateVisuals();
                                 App.UI.renderNotifications();
                                 console.log(`Kiosk: Synced via ${i === 0 ? 'Direct' : 'Proxy ' + i}`);
@@ -1102,8 +1203,8 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                             if (q.AssignedGuild && q.AssignedGuild !== 'ALL' && q.AssignedGuild !== hunter.Guild) return '';
 
                             const completedEntry = completedQuests.find(cq => cq.quest_id === q.ID);
+                            const monster = getQuestMonster(q.TotalXP, q.ID);
                             const isCompleted = !!completedEntry;
-                            const statusClass = isCompleted ? 'text-emerald-400 border-emerald-900 bg-emerald-900/20' : 'text-red-400 border-red-900 bg-red-900/20';
 
                             // Deadline Logic
                             let deadlineText = '';
@@ -1111,11 +1212,9 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                                 const d = new Date(q.Deadline);
                                 const now = new Date();
                                 const diff = d - now;
-
                                 if (diff < 0) {
                                     deadlineText = '<div class="text-[10px] text-red-500 font-mono mt-1">STATUS: EXPIRED</div>';
                                 } else {
-                                    // Calculate countdown
                                     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                                     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                                     const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -1125,35 +1224,55 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
 
                             // Guild Label
                             const guildLabel = (q.AssignedGuild && q.AssignedGuild !== 'ALL')
-                                ? `<span class="text-[9px] bg-blue-900/50 text-blue-300 px-1 rounded border border-blue-800 mr-2">${q.AssignedGuild}</span>`
+                                ? `<span class="text-[9px] bg-blue-900/50 text-blue-300 px-1 rounded border border-blue-800 mr-1">${q.AssignedGuild}</span>`
                                 : '';
 
                             // Criteria List
                             let rubricHtml = '';
                             if (q.Rubrics && q.Rubrics.length > 0) {
-                                rubricHtml = '<div class="mt-2 pl-2 border-l border-gray-700 space-y-1">';
+                                rubricHtml = '<div class="mt-2 pl-2 border-l space-y-1" style="border-color:' + monster.borderColor + '40;">';
                                 q.Rubrics.forEach(r => {
-                                    // Robust Property Access: Handle different capitalizations or potential data creep
                                     const desc = r.criterion || r.Criterion || r.description || r.Description || "Detail Undefined";
                                     const pts = r.points || r.Points || 0;
-                                    rubricHtml += `<div class="flex justify-between text-[10px] text-gray-500 font-mono"><span>- ${desc}</span> <span class="text-blue-500/50">[${pts}]</span></div>`;
+                                    rubricHtml += `<div class="flex justify-between text-[10px] text-gray-500 font-mono"><span>- ${desc}</span> <span style="color:${monster.color}80;">[${pts}]</span></div>`;
                                 });
                                 rubricHtml += '</div>';
                             }
 
                             return `
-                    <div class="flex justify-between items-start p-3 rounded border ${statusClass} mb-2">
-                        <div class="flex-grow">
-                            <div class="flex items-center mb-1">
-                                ${guildLabel}
-                                <div class="font-bold text-xs md:text-sm text-gray-200 leading-tight">${q.Title}</div>
+                    <div class="mb-2 rounded-lg overflow-hidden border transition-all duration-200" style="border-color: ${isCompleted ? '#16a34a' : monster.borderColor}; box-shadow: 0 0 12px ${isCompleted ? 'rgba(22,163,74,0.2)' : monster.glow};">
+                        <div class="flex">
+                            <!-- Monster panel -->
+                            <div class="relative flex-shrink-0 w-20 flex flex-col items-center justify-center p-2 overflow-hidden" style="background: linear-gradient(160deg, rgba(0,0,0,0.95) 0%, ${monster.tagBg} 100%); border-right: 1px solid ${monster.borderColor}40;">
+                                <div class="absolute inset-0" style="background: radial-gradient(circle at 50% 30%, ${monster.color}15, transparent 70%);"></div>
+                                <div class="relative z-10 w-14 h-14 flex items-center justify-center">
+                                    <img src="${monster.spriteUrl}" alt="${monster.displayName}" class="max-w-full max-h-full object-contain" style="image-rendering: pixelated; filter: drop-shadow(0 0 6px ${monster.color}) ${isCompleted ? 'grayscale(0.6) brightness(0.5)' : ''};" onerror="this.style.opacity='0.2';">
+                                    ${isCompleted ? '<div class="absolute inset-0 flex items-center justify-center"><div class="text-green-400 text-lg font-black" style="text-shadow:0 0 8px #4ade80;">✓</div></div>' : ''}
+                                </div>
+                                <div class="relative z-10 mt-1 text-center w-full">
+                                    <div class="text-[7px] font-black uppercase tracking-widest truncate" style="color: ${monster.color};">${monster.label}</div>
+                                    <div class="text-[8px] text-gray-400 font-bold truncate">${monster.displayName}</div>
+                                </div>
                             </div>
-                            <div class="text-[10px] md:text-xs text-gray-500">${q.TotalXP} XP Reward</div>
-                            ${deadlineText}
-                            ${rubricHtml}
-                        </div>
-                        <div class="text-[10px] md:text-xs font-black tracking-widest ${isCompleted ? 'text-emerald-500' : 'text-red-500'} self-center ml-2">
-                            ${isCompleted ? 'COMPLETE' : 'PENDING'}
+
+                            <!-- Quest info -->
+                            <div class="flex-1 p-2.5 min-w-0 ${isCompleted ? 'bg-emerald-900/10' : 'bg-gray-900/60'}">
+                                <div class="flex items-start justify-between mb-1">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center flex-wrap gap-1 mb-0.5">
+                                            ${guildLabel}
+                                            <span class="text-[8px] font-black px-1.5 py-0.5 rounded" style="background:${monster.tagBg}; color:${monster.color}; border:1px solid ${monster.borderColor};">${monster.label}</span>
+                                        </div>
+                                        <div class="font-bold text-xs md:text-sm text-gray-200 leading-tight">${q.Title}</div>
+                                        <div class="text-[10px] md:text-xs mt-0.5 font-bold" style="color:${monster.color};">${q.TotalXP} XP &nbsp;·&nbsp; <span class="text-gray-500 font-normal text-[9px]">${isCompleted ? 'MONSTER SLAIN' : monster.desc}</span></div>
+                                    </div>
+                                    <div class="text-[10px] md:text-xs font-black tracking-widest ml-2 flex-shrink-0 ${isCompleted ? 'text-emerald-500' : 'text-red-500'}">
+                                        ${isCompleted ? '✓ CLEARED' : '⚔ ACTIVE'}
+                                    </div>
+                                </div>
+                                ${deadlineText}
+                                ${rubricHtml}
+                            </div>
                         </div>
                     </div>`;
                         }).join('') || '<div class="text-gray-500 text-center italic">No quests available.</div>';
@@ -1931,12 +2050,12 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                 </div>`;
                     },
 
-                    showLeaderboard() {
+                    showLeaderboard(type = 'seasonal') {
                         const allHunters = [];
                         if (App.state.systemData.hunters) {
                             for (const [guild, list] of Object.entries(App.state.systemData.hunters)) {
                                 list.forEach(h => {
-                                    const won = h.TotalAPWon;
+                                    const won = type === 'seasonal' ? (h.SeasonAPWon || 0) : (h.TotalAPWon || 0);
                                     allHunters.push({ ...h, Guild: guild, _won: won });
                                 });
                             }
@@ -1952,6 +2071,13 @@ v1.7.26.1 - 2026-02-22 15:05:00 - Fixed Dungeon Tower tracking to use only the l
                         <svg class="w-4 h-4 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                     </button>
                     <h1 class="text-3xl md:text-5xl font-black text-yellow-500 cinzel text-center mb-4 md:mb-8 drop-shadow-lg shrink-0">COMBAT RANKINGS</h1>
+                    
+                    <!-- Tabs -->
+                    <div class="flex justify-center gap-4 mb-6 shrink-0">
+                        <button onclick="App.VS.showLeaderboard('seasonal')" class="px-6 py-2 rounded-full font-bold cinzel transition-all ${type === 'seasonal' ? 'bg-yellow-600 text-white shadow-[0_0_15px_rgba(202,138,4,0.5)]' : 'bg-gray-900 text-gray-500 border border-gray-800 hover:border-yellow-900'}">SEASONAL</button>
+                        <button onclick="App.VS.showLeaderboard('global')" class="px-6 py-2 rounded-full font-bold cinzel transition-all ${type === 'global' ? 'bg-yellow-600 text-white shadow-[0_0_15px_rgba(202,138,4,0.5)]' : 'bg-gray-900 text-gray-500 border border-gray-800 hover:border-yellow-900'}">GLOBAL</button>
+                    </div>
+
                     <div class="bg-gray-900/90 border border-yellow-900/50 rounded-xl overflow-hidden shadow-2xl flex-grow overflow-y-auto custom-scroll w-full max-w-4xl mx-auto">
                         <table class="w-full text-left">
                             <thead class="bg-black/50 text-yellow-600 uppercase text-[10px] md:text-xs font-bold tracking-wider sticky top-0 backdrop-blur-sm z-10">
