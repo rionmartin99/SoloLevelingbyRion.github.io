@@ -339,6 +339,12 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
 </head>
 
 <body class="flex items-center justify-center h-screen w-screen relative bg-black overflow-hidden">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-gray-950 z-[100] flex flex-col items-center justify-center transition-opacity duration-700">
+        <div class="loader-ring mb-12"></div>
+        <h3 class="cinzel text-xl md:text-3xl text-white tracking-[0.3em] md:tracking-[0.5em] mb-4 text-center px-6">SYSTEM INITIALIZING</h3>
+        <p id="loading-status" class="text-blue-500 font-mono text-[9px] md:text-[10px] uppercase tracking-[0.3em] animate-pulse text-center">Establishing Secure Uplink...</p>
+    </div>
     <div class="scan-line"></div>
 
     <!-- Dark overlay to ensure text readability -->
@@ -662,9 +668,16 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
                     };
 
                     // 3. Start Data Sync
-                    // 3. Start Data Sync
                     this.API.refreshData().then(() => {
                         App.Profile.checkPersistence();
+                        // Dismiss loading overlay
+                        setTimeout(() => {
+                            const loader = document.getElementById('loading-overlay');
+                            if (loader) {
+                                loader.classList.add('opacity-0', 'pointer-events-none');
+                                setTimeout(() => loader.remove(), 700);
+                            }
+                        }, 1000);
                     });
                     setInterval(() => this.API.refreshData(), 15000);
 
@@ -859,8 +872,8 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
                             App.els.questNotificationsLog.innerHTML = questHtml;
                         }
 
-                        // 2. Process System Notifications (Combat + Completion)
-                        const systemLogs = logs.filter(l => l[2] === 'Match Finished' || l[2] === 'XP Update').slice().reverse();
+                        // 2. Process System Notifications (Combat + Completion + Absence)
+                        const systemLogs = logs.filter(l => l[2] === 'Match Finished' || l[2] === 'XP Update' || l[2] === 'Absence').slice().reverse();
 
                         if (systemLogs.length === 0) {
                             App.els.systemNotificationsLog.innerHTML = '<div class="text-gray-600 italic text-xs">System Idle...</div>';
@@ -966,6 +979,12 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
                                     } else {
                                         return '';
                                     }
+                                } else if (type === 'Absence') {
+                                    label = 'ABSENCE REPORT';
+                                    css = 'text-red-500 border-l-2 border-red-500 pl-2 bg-red-900/10 font-bold';
+                                    const hObj = App.Helpers.findHunter(l[1]);
+                                    const hName = hObj ? hObj.Name : l[1];
+                                    msg = `-5 XP // Hunter: ${hName}`;
                                 }
 
                                 return `<div class="mb-1 ${css} opacity-80 hover:opacity-100 transition-opacity text-xs md:text-sm shrink-0">
@@ -1287,7 +1306,7 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
                         // DUNGEON TOWER LOGIC (Dynamic)
                         let dungeonHtml = '';
                         if (hunter.Guild && hunter.Guild !== 'None') {
-                            const guildHunters = App.state.systemData.hunters[hunter.Guild] || [];
+                            const guildHunters = (App.state.systemData.hunters[hunter.Guild] || []).filter(h => !h.IsAdmin);
 
                             // Only count Wisdom quests ASSIGNED to this hunter's guild
                             const allWisdomQuests = (App.state.systemData.quests || []).filter(q => {
@@ -1472,15 +1491,18 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
 
                         const isS = App.state.activeTab === 'stats';
                         const isQ = App.state.activeTab === 'quests';
+                        const isL = App.state.activeTab === 'leaderboard';
                         const isR = App.state.activeTab === 'recognitions';
 
                         const statsClass = isS ? 'flex flex-col md:flex-row gap-4 md:gap-8' : 'hidden';
                         const questsClass = isQ ? 'flex flex-col min-h-0 flex-1' : 'hidden';
+                        const leaderboardClass = isL ? 'pb-20 overflow-y-auto min-h-0 flex-1' : 'hidden';
                         const recognitionsClass = isR ? 'pb-20 overflow-y-auto min-h-0 flex-1' : 'hidden';
 
                         const statsBtnClass = isS ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-white';
                         const questsBtnClass = isQ ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-white';
-                        const recognitionsBtnClass = isR ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-white';
+                        const leaderboardBtnClass = App.state.activeTab === 'leaderboard' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-white';
+                        const recognitionsBtnClass = App.state.activeTab === 'recognitions' ? 'text-white border-blue-500' : 'text-gray-500 border-transparent hover:text-white';
 
                         // Parse Buffs
                         const buffs = (() => { try { return JSON.parse(hunter.Buffs || '[]'); } catch (e) { return []; } })();
@@ -1543,6 +1565,7 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
                         <div class="flex gap-2 md:gap-4 pr-0 md:pr-8 w-full md:w-auto overflow-x-auto pb-1 md:pb-0 items-center">
                             <button onclick="App.Profile.switchTab('stats')" id="btn-stats" class="text-[10px] md:text-sm font-bold ${statsBtnClass} uppercase border-b-2 px-1 py-1 md:px-2 transition-colors whitespace-nowrap">STATUS</button>
                             <button onclick="App.Profile.switchTab('quests')" id="btn-quests" class="text-[10px] md:text-sm font-bold ${questsBtnClass} uppercase border-b-2 px-1 py-1 md:px-2 transition-colors whitespace-nowrap">MISSIONS</button>
+                            <button onclick="App.Profile.switchTab('leaderboard')" id="btn-leaderboard" class="text-[10px] md:text-sm font-bold ${leaderboardBtnClass} uppercase border-b-2 px-1 py-1 md:px-2 transition-colors whitespace-nowrap">LEADERBOARDS</button>
                             ${hasCerts ? `<button onclick="App.Profile.switchTab('recognitions')" id="btn-recognitions" class="text-[10px] md:text-sm font-bold ${recognitionsBtnClass} uppercase border-b-2 px-1 py-1 md:px-2 transition-colors whitespace-nowrap">RECOGNITIONS</button>` : ''}
                         </div>
                     </div>
@@ -1685,6 +1708,10 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
                         ${dungeonHtml}
                         <div class="overflow-y-auto pr-2 quest-scroll flex-grow">${questListHtml}</div>
                     </div>
+                    <div class="${leaderboardClass}" id="view-leaderboard">
+                        <h2 class="text-xl md:text-2xl font-black text-white cinzel mb-4">SEASONAL RANKINGS</h2>
+                        ${this.renderSeasonalLeaderboard()}
+                    </div>
                     
                     <div class="${recognitionsClass}" id="view-recognitions">
                         ${hasCerts ? App.Profile.renderCertificatesHTML(hunter) : ''}
@@ -1729,7 +1756,73 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
                         }
 
                         // Render charts after DOM is updated
-                        setTimeout(() => App.Helpers.renderCharts(hunter), 100);
+                        setTimeout(() => {
+                            App.Helpers.renderCharts(hunter);
+                            // If seasonal leaderboard is current tab, we might need a refresh or just rely on render()
+                        }, 100);
+                    },
+
+                    renderSeasonalLeaderboard() {
+                        const hunters = Object.values(App.state.systemData.hunters).flat().filter(h => !h.IsAdmin);
+                        if (!hunters || hunters.length === 0) return '<div class="text-gray-500 text-center italic py-20">Database synchronization required...</div>';
+
+                        const currentHunterId = App.state.currentHunterId;
+
+                        const getRankBonus = (rank) => {
+                            return { "S": 50000, "A": 10000, "B": 5000, "C": 1000, "D": 500, "E": 0 }[rank] || 0;
+                        };
+
+                        const getCompositeScore = (h) => {
+                            const rating = App.Helpers.calculateRating(h);
+                            const basePower = (h.XP || 0) + getRankBonus(h.Rank);
+                            return basePower * Math.max(0.1, rating / 100);
+                        };
+
+                        // Sorting hunters for Seasonal Vanguard (Composite)
+                        const sortedHunters = [...hunters].map(h => ({
+                            ...h,
+                            _composite: getCompositeScore(h),
+                            _rating: App.Helpers.calculateRating(h)
+                        })).sort((a,b) => b._composite - a._composite).slice(0, 15);
+                        
+                        const createLeaderboardRow = (h, rank) => {
+                            return `
+                                <div class="flex items-center gap-3 p-3 ${h.ID === currentHunterId ? 'bg-blue-600/20 border-blue-500/50' : 'bg-gray-800/40 border-gray-700/50'} border rounded-lg mb-2 hover:border-blue-500/50 transition-all group relative overflow-hidden">
+                                    ${h.ID === currentHunterId ? '<div class="absolute inset-y-0 left-0 w-1 bg-blue-500"></div>' : ''}
+                                    <div class="w-8 h-8 flex items-center justify-center font-black cinzel ${rank <= 3 ? (rank === 1 ? 'text-yellow-400' : (rank === 2 ? 'text-gray-300' : 'text-amber-600')) : 'text-gray-500'} ${rank <= 3 ? 'text-xl' : 'text-sm'}">
+                                        ${rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : rank))}
+                                    </div>
+                                    <div class="w-10 h-10 rounded-lg overflow-hidden bg-black border border-gray-700">
+                                        <img src="${h.PhotoURL || DEFAULT_AVATAR_B64}" class="w-full h-full object-cover">
+                                    </div>
+                                    <div class="flex-1">
+                                        <div class="text-xs font-bold text-white uppercase tracking-tight">${h.Name} ${h.ID === currentHunterId ? '<span class="text-[8px] text-blue-400 ml-1 font-mono tracking-normal">(YOU)</span>' : ''}</div>
+                                        <div class="text-[9px] text-gray-500 font-bold uppercase tracking-widest">${h.Guild} // ${h.Rank}-RANK // ${h._rating.toFixed(1)}% QUALITY</div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="text-xs font-black font-mono text-blue-400">${Math.round(h._composite).toLocaleString()}</div>
+                                        <div class="text-[8px] text-gray-600 font-bold uppercase tracking-widest">P-SCORE</div>
+                                    </div>
+                                </div>
+                            `;
+                        };
+
+                        return `
+                            <div class="space-y-6 animate-fade-in pb-12">
+                                <div>
+                                    <div class="flex items-center gap-4 mb-6 border-b border-gray-800 pb-2">
+                                        <div class="w-2 h-2 bg-blue-500 shadow-[0_0_8px_#3b82f6] rotate-45"></div>
+                                        <h3 class="cinzel text-xl font-black text-white tracking-widest">SEASONAL VANGUARD</h3>
+                                        <span class="text-[8px] text-blue-500 font-mono ml-auto uppercase tracking-widest">
+                                            XP & KSW PERFORMANCE RANKING
+                                        </span>
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-1 gap-1">
+                                        ${sortedHunters.map((h, i) => createLeaderboardRow(h, i+1)).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
                     },
 
                     switchTab(tabName) {
@@ -1737,21 +1830,28 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
 
                         const stats = document.getElementById('view-stats');
                         const quests = document.getElementById('view-quests');
+                        const leaderboard = document.getElementById('view-leaderboard');
                         const recognitions = document.getElementById('view-recognitions');
+
                         const btnStats = document.getElementById('btn-stats');
                         const btnQuests = document.getElementById('btn-quests');
+                        const btnLeaderboard = document.getElementById('btn-leaderboard');
                         const btnRecognitions = document.getElementById('btn-recognitions');
 
                         if (stats) stats.className = tabName === 'stats' ? 'flex flex-col md:flex-row gap-4 md:gap-8' : 'hidden';
                         if (quests) quests.className = tabName === 'quests' ? 'flex flex-col min-h-0 flex-1' : 'hidden';
+                        if (leaderboard) leaderboard.className = tabName === 'leaderboard' ? 'pb-20 overflow-y-auto min-h-0 flex-1' : 'hidden';
                         if (recognitions) recognitions.className = tabName === 'recognitions' ? 'pb-20 overflow-y-auto min-h-0 flex-1' : 'hidden';
 
                         const makeActive = (btn) => { if (btn) { btn.classList.add('text-white', 'border-blue-500'); btn.classList.remove('text-gray-500', 'border-transparent'); } };
                         const makeInactive = (btn) => { if (btn) { btn.classList.remove('text-white', 'border-blue-500'); btn.classList.add('text-gray-500', 'border-transparent'); } };
 
-                        if (tabName === 'stats') { makeActive(btnStats); makeInactive(btnQuests); makeInactive(btnRecognitions); }
-                        else if (tabName === 'quests') { makeInactive(btnStats); makeActive(btnQuests); makeInactive(btnRecognitions); }
-                        else if (tabName === 'recognitions') { makeInactive(btnStats); makeInactive(btnQuests); makeActive(btnRecognitions); }
+                        makeInactive(btnStats); makeInactive(btnQuests); makeInactive(btnLeaderboard); makeInactive(btnRecognitions);
+                        
+                        if (tabName === 'stats') makeActive(btnStats);
+                        else if (tabName === 'quests') makeActive(btnQuests);
+                        else if (tabName === 'leaderboard') makeActive(btnLeaderboard);
+                        else if (tabName === 'recognitions') makeActive(btnRecognitions);
                     },
 
                     renderCertificatesHTML(hunter) {
@@ -2352,6 +2452,7 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
 
                         for (const section in data.hunters) {
                             data.hunters[section].forEach(h => {
+                                h.Guild = section;
                                 h.CompletedQuests = safeParse(h.CompletedQuests, []);
                                 h.CombatHistory = safeParse(h.CombatHistory, []);
 
