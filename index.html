@@ -1,10 +1,10 @@
 <!--
 CHANGELOG:
+v1.7.36 - 2026-05-28 22:30:00 - Fix - Hunter Terminal: Enable desktop scrollability on status container and filter out hunters with 0 XP from seasonal leaderboard on reset.
 v1.7.35 - 2026-04-01 19:28:00 - UI Update - Redefined XP Ranks: Updated thresholds (81-100: SS-Rank, 61-80: S-Rank, 51-60: A-Rank, 31-50: B-Rank, 21-30: C-Rank, 11-20: D-Rank, 5-10: E-Rank) and renamed "National Level" label to "SS-Rank".
 v1.7.30 - 2026-04-01 12:30:00 - New Feature - Cloud Monster Sprites: Integrated Google Drive/Sheets backend for sprite storage; added 'Cloud Sprite Sync' admin tool to eliminate local file dependencies.
 v1.7.29 - 2026-04-01 01:31:00 - Fix - Quest Monster System: switched SPRITE_BASE from absolute local path to relative path for GitHub compatibility; refreshed all sprite lists to match actual files on disk.
 v1.7.28 - 2026-04-01 00:45:00 - New Feature - Quest Monster System: rank brackets tied to TotalXP points, random monster sprite displayed on quest cards for immersive hunter experience.
-v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to replace external placehold.co images.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -485,7 +485,7 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
 
     <!-- Status View -->
     <div id="status"
-        class="hidden w-full h-full md:h-auto md:max-h-[90vh] md:max-w-5xl p-4 md:p-10 z-10 relative overflow-y-auto md:overflow-visible safe-bottom">
+        class="hidden w-full h-full md:h-auto md:max-h-[90vh] md:max-w-5xl p-4 md:p-10 z-10 relative overflow-y-auto custom-scroll safe-bottom">
         <!-- Injected Content -->
     </div>
 
@@ -1763,8 +1763,10 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
                     },
 
                     renderSeasonalLeaderboard() {
-                        const hunters = Object.values(App.state.systemData.hunters).flat().filter(h => !h.IsAdmin);
-                        if (!hunters || hunters.length === 0) return '<div class="text-gray-500 text-center italic py-20">Database synchronization required...</div>';
+                        const allHunters = Object.values(App.state.systemData.hunters).flat().filter(h => !h.IsAdmin);
+                        if (!allHunters || allHunters.length === 0) return '<div class="text-gray-500 text-center italic py-20">Database synchronization required...</div>';
+
+                        const hunters = allHunters.filter(h => (h.XP || 0) > 0);
 
                         const currentHunterId = App.state.currentHunterId;
 
@@ -1807,6 +1809,10 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
                             `;
                         };
 
+                        const listContent = sortedHunters.length > 0 
+                            ? sortedHunters.map((h, i) => createLeaderboardRow(h, i+1)).join('')
+                            : '<div class="text-gray-500 text-center italic py-20 bg-gray-900/20 border border-gray-750 rounded-lg">No seasonal data available. Rankings will populate once hunters earn XP.</div>';
+
                         return `
                             <div class="space-y-6 animate-fade-in pb-12">
                                 <div>
@@ -1818,7 +1824,7 @@ v1.7.27 - 2026-02-28 12:16:21 - New Feature - Embedded default base64 avatar to 
                                         </span>
                                     </div>
                                     <div class="grid grid-cols-1 md:grid-cols-1 gap-1">
-                                        ${sortedHunters.map((h, i) => createLeaderboardRow(h, i+1)).join('')}
+                                        ${listContent}
                                     </div>
                                 </div>
                             </div>
